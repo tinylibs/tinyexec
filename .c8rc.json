@@ -1,0 +1,6 @@
+{
+  "reporter": ["lcov"],
+  "exclude": [
+    "lib/test"
+  ]
+}
