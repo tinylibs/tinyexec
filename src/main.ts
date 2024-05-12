@@ -1,16 +1,9 @@
 import {
-  type ChildProcess
+  type ChildProcess,
+  type CommonSpawnOptions,
+  spawn
 } from 'node:child_process';
-
-export interface ToFileOptions {
-  stderr: boolean;
-  stdout: boolean;
-}
-
-const defaultToFileOptions: ToFileOptions = {
-  stderr: true,
-  stdout: true
-};
+import {platform} from 'node:process';
 
 export interface Output {
   stderr: string;
@@ -24,7 +17,6 @@ export interface PipeOptions extends Options {
 }
 
 export interface OutputApi extends AsyncIterable<string> {
-  toFile(path: string, options?: Partial<ToFileOptions>): Promise<void>;
   pipe(
     command: string,
     args?: string[],
@@ -44,12 +36,30 @@ type Result = PromiseLike<Output> & OutputApi;
 export interface Options {
   inputFile: string;
   signal: AbortSignal;
+  nodeOptions: CommonSpawnOptions;
+  timeout: number;
+  persist: boolean;
 }
 
 export interface TinyExec {
-  (
-    command: string,
-    args?: string[],
-    options?: Options
-  ): Result;
+  (command: string, args?: string[], options?: Partial<Options>): Result;
 }
+
+const defaultOptions: Partial<Options> = {
+  timeout: 10000,
+  persist: false
+};
+
+export const tinyExec: TinyExec = (command, args, userOptions) => {
+  const options = {
+    ...defaultOptions,
+    ...userOptions
+  };
+
+  try {
+    const handle = spawn(command, args, options);
+  } catch (err) {
+    // TODO (jg): handle errors
+    throw err;
+  }
+};
