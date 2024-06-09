@@ -1,8 +1,4 @@
-import {
-  type ChildProcess,
-  type CommonSpawnOptions,
-  spawn
-} from 'node:child_process';
+import {type ChildProcess, type SpawnOptions, spawn} from 'node:child_process';
 import {type EventEmitter} from 'node:events';
 import {PassThrough, type Readable} from 'node:stream';
 import {
@@ -18,11 +14,7 @@ export interface Output {
   stdout: string;
 }
 
-export interface PipeOptions extends Options {
-  from: string;
-  to: string;
-  signal: AbortSignal;
-}
+export interface PipeOptions extends Options {}
 
 export interface OutputApi extends AsyncIterable<string> {
   pipe(
@@ -43,7 +35,7 @@ type Result = PromiseLike<Output> & OutputApi;
 
 export interface Options {
   signal: AbortSignal;
-  nodeOptions: CommonSpawnOptions;
+  nodeOptions: SpawnOptions;
   timeout: number;
   persist: boolean;
   stdin: ExecProcess;
@@ -58,7 +50,7 @@ const defaultOptions: Partial<Options> = {
   persist: false
 };
 
-const defaultNodeOptions: CommonSpawnOptions = {
+const defaultNodeOptions: SpawnOptions = {
   windowsHide: true
 };
 
@@ -78,7 +70,7 @@ function normaliseCommandAndArgs(
   };
 }
 
-type EnvLike = CommonSpawnOptions['env'];
+type EnvLike = SpawnOptions['env'];
 
 interface EnvPathInfo {
   key: string;
@@ -155,6 +147,23 @@ const readStreamAsString = (stream: Readable): Promise<string> => {
   });
 };
 
+const waitForEventOrClose = <T extends unknown[]>(
+  emitter: EventEmitter,
+  name: string
+): Promise<T | null> => {
+  return new Promise((resolve) => {
+    const onClose = () => {
+      emitter.removeListener(name, onData);
+      resolve(null);
+    };
+    const onData = (...args: T) => {
+      emitter.removeListener('close', onClose);
+      resolve(args);
+    };
+    emitter.once('close', onClose);
+    emitter.once(name, onData);
+  });
+};
 const waitForEvent = (emitter: EventEmitter, name: string): Promise<void> => {
   return new Promise((resolve) => {
     emitter.on(name, resolve);
@@ -191,8 +200,13 @@ export class ExecProcess implements Result {
     return this._process.killed;
   }
 
-  public pipe(command: string, args?: string[]): Result {
+  public pipe(
+    command: string,
+    args?: string[],
+    options?: Partial<PipeOptions>
+  ): Result {
     return exec(command, args, {
+      ...options,
       stdin: this
     });
   }
@@ -224,11 +238,21 @@ export class ExecProcess implements Result {
         await this._options.parent;
       }
 
-      const [stderr, stdout] = await Promise.all([
-        this._process.stderr && readStreamAsString(this._process.stderr),
-        this._process.stdout && readStreamAsString(this._process.stdout),
-        waitForEvent(this._process, 'close')
+      const proc = this._process;
+
+      const [stderr, stdout, err] = await Promise.all([
+        proc.stderr && readStreamAsString(proc.stderr),
+        proc.stdout && readStreamAsString(proc.stdout),
+        waitForEventOrClose<[Error]>(proc, 'error'),
+        waitForEvent(proc, 'close')
       ]);
+
+      if (err) {
+        if (err instanceof Error && err.name === 'AbortError') {
+          this._aborted = true;
+        }
+        // TODO handle other errors
+      }
 
       const result: Output = {
         stderr: stderr ?? '',
@@ -273,6 +297,14 @@ export const exec: TinyExec = (command, args, userOptions) => {
 
   if (options.timeout !== undefined) {
     nodeOptions.timeout = options.timeout;
+  }
+
+  if (options.signal !== undefined) {
+    nodeOptions.signal = options.signal;
+  }
+
+  if (options.persist === true) {
+    nodeOptions.detached = true;
   }
 
   const cwd = getCwd();
