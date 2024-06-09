@@ -3,6 +3,8 @@ import {
   type CommonSpawnOptions,
   spawn
 } from 'node:child_process';
+import {type EventEmitter} from 'node:events';
+import {PassThrough, type Readable} from 'node:stream';
 import {
   normalize as normalizePath,
   delimiter as pathDelimiter,
@@ -44,6 +46,7 @@ export interface Options {
   nodeOptions: CommonSpawnOptions;
   timeout: number;
   persist: boolean;
+  stdin: ExecProcess;
 }
 
 export interface TinyExec {
@@ -118,16 +121,50 @@ function addNodeBinToPath(cwd: string, path: EnvPathInfo): EnvPathInfo {
 }
 
 function computeEnv(cwd: string, env: EnvLike): EnvLike {
-  const envPathInfo = addNodeBinToPath(cwd, getPathFromEnv(env));
-
-  return {
-    [envPathInfo.key]: envPathInfo.value
+  const envWithDefault = {
+    ...process.env,
+    ...env
   };
+  const envPathInfo = addNodeBinToPath(cwd, getPathFromEnv(envWithDefault));
+  envWithDefault[envPathInfo.key] = envPathInfo.value;
+
+  return envWithDefault;
 }
+
+interface ExecProcessOptions {
+  parent?: ExecProcess;
+}
+
+const readStreamAsString = (stream: Readable): Promise<string> => {
+  return new Promise<string>((resolve, reject) => {
+    let result = '';
+    const onDataReceived = (chunk: Buffer | string): void => {
+      result += chunk.toString();
+    };
+
+    stream.once('error', (err) => {
+      reject(err);
+    });
+
+    stream.on('data', onDataReceived);
+
+    stream.once('end', () => {
+      stream.removeListener('data', onDataReceived);
+      resolve(result);
+    });
+  });
+};
+
+const waitForEvent = (emitter: EventEmitter, name: string): Promise<void> => {
+  return new Promise((resolve) => {
+    emitter.on(name, resolve);
+  });
+};
 
 export class ExecProcess implements Result {
   protected _process: ChildProcess;
   protected _aborted: boolean = false;
+  protected _options?: ExecProcessOptions;
 
   public get process(): ChildProcess {
     return this._process;
@@ -137,8 +174,9 @@ export class ExecProcess implements Result {
     return this._process.pid;
   }
 
-  public constructor(proc: ChildProcess) {
+  public constructor(proc: ChildProcess, options?: ExecProcessOptions) {
     this._process = proc;
+    this._options = options;
   }
 
   public kill(signal?: Parameters<ChildProcess['kill']>[0]): boolean {
@@ -154,19 +192,49 @@ export class ExecProcess implements Result {
   }
 
   public pipe(command: string, args?: string[]): Result {
-    // TODO (jg)
+    return exec(command, args, {
+      stdin: this
+    });
   }
 
   async *[Symbol.asyncIterator](): AsyncIterator<string> {
-    // TODO (jg)
+    const proc = this._process;
+    const sources: Readable[] = [];
+    if (proc.stderr) {
+      sources.push(proc.stderr);
+    }
+    if (proc.stdout) {
+      sources.push(proc.stdout);
+    }
+    const combined = combineStreams(sources);
+
+    for await (const chunk of combined) {
+      yield chunk.toString();
+    }
+
+    await waitForEvent(proc, 'close');
   }
 
   public then<TResult1 = Output, TResult2 = never>(
     onfulfilled?: ((value: Output) => TResult1 | PromiseLike<TResult1>) | null,
     _onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
   ): PromiseLike<TResult1 | TResult2> {
-    return new Promise<TResult1 | TResult2>((resolve, reject) => {
-      const result: Output = {stderr: '', stdout: ''};
+    return new Promise<TResult1 | TResult2>(async (resolve) => {
+      if (this._options?.parent) {
+        await this._options.parent;
+      }
+
+      const [stderr, stdout] = await Promise.all([
+        this._process.stderr && readStreamAsString(this._process.stderr),
+        this._process.stdout && readStreamAsString(this._process.stdout),
+        waitForEvent(this._process, 'close')
+      ]);
+
+      const result: Output = {
+        stderr: stderr ?? '',
+        stdout: stdout ?? ''
+      };
+
       if (onfulfilled) {
         resolve(onfulfilled(result));
       } else {
@@ -175,6 +243,23 @@ export class ExecProcess implements Result {
     });
   }
 }
+
+const combineStreams = (streams: Readable[]): Readable => {
+  let streamCount = streams.length;
+  const combined = new PassThrough();
+  const maybeEmitEnd = () => {
+    if (--streamCount === 0) {
+      combined.emit('end');
+    }
+  };
+
+  for (const stream of streams) {
+    stream.pipe(combined, {end: false});
+    stream.on('end', maybeEmitEnd);
+  }
+
+  return combined;
+};
 
 export const exec: TinyExec = (command, args, userOptions) => {
   const options = {
@@ -206,5 +291,12 @@ export const exec: TinyExec = (command, args, userOptions) => {
     throw err;
   }
 
-  return new ExecProcess(handle);
+  if (options.stdin !== undefined && handle.stdin) {
+    const {stdout} = options.stdin.process;
+    if (stdout) {
+      stdout.pipe(handle.stdin);
+    }
+  }
+
+  return new ExecProcess(handle, {parent: options.stdin});
 };
