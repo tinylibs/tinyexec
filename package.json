@@ -15,6 +15,7 @@
     "test": "npm run build && node --test dist/esm/test",
     "lint": "eslint src",
     "format": "prettier --write src",
+    "format:check": "prettier --check src",
     "prepare": "tshy"
   },
   "repository": {
