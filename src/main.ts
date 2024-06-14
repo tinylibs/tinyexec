@@ -241,10 +241,12 @@ export class ExecProcess implements Result {
   };
 }
 
-export const exec: TinyExec = (command, args, userOptions) => {
+export const x: TinyExec = (command, args, userOptions) => {
   const proc = new ExecProcess(command, args, userOptions);
 
   proc.spawn();
 
   return proc;
 };
+
+export const exec = x;
