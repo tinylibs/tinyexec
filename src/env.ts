@@ -1,11 +1,10 @@
-import {type SpawnOptions} from 'node:child_process';
 import {
   delimiter as pathDelimiter,
   resolve as resolvePath,
   dirname
 } from 'node:path';
 
-export type EnvLike = SpawnOptions['env'];
+export type EnvLike = (typeof process)['env'];
 
 export interface EnvPathInfo {
   key: string;
@@ -50,7 +49,7 @@ function addNodeBinToPath(cwd: string, path: EnvPathInfo): EnvPathInfo {
   return {key: path.key, value: parts.join(pathDelimiter)};
 }
 
-export function computeEnv(cwd: string, env: EnvLike): EnvLike {
+export function computeEnv(cwd: string, env?: EnvLike): EnvLike {
   const envWithDefault = {
     ...process.env,
     ...env
