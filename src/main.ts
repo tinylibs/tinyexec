@@ -16,14 +16,16 @@ export interface Output {
 
 export interface PipeOptions extends Options {}
 
+export type KillSignal = Parameters<ChildProcess['kill']>[0];
+
 export interface OutputApi extends AsyncIterable<string> {
   pipe(
     command: string,
     args?: string[],
     options?: Partial<PipeOptions>
   ): Result;
-  process: ChildProcess;
-  kill(signal: number): boolean;
+  process: ChildProcess | undefined;
+  kill(signal?: KillSignal): boolean;
 
   // Getters
   get pid(): number | undefined;
@@ -123,10 +125,6 @@ function computeEnv(cwd: string, env: EnvLike): EnvLike {
   return envWithDefault;
 }
 
-interface ExecProcessOptions {
-  parent?: ExecProcess;
-}
-
 const readStreamAsString = (stream: Readable): Promise<string> => {
   return new Promise<string>((resolve, reject) => {
     let result = '';
@@ -147,23 +145,6 @@ const readStreamAsString = (stream: Readable): Promise<string> => {
   });
 };
 
-const waitForEventOrClose = <T extends unknown[]>(
-  emitter: EventEmitter,
-  name: string
-): Promise<T | null> => {
-  return new Promise((resolve) => {
-    const onClose = () => {
-      emitter.removeListener(name, onData);
-      resolve(null);
-    };
-    const onData = (...args: T) => {
-      emitter.removeListener('close', onClose);
-      resolve(args);
-    };
-    emitter.once('close', onClose);
-    emitter.once(name, onData);
-  });
-};
 const waitForEvent = (emitter: EventEmitter, name: string): Promise<void> => {
   return new Promise((resolve) => {
     emitter.on(name, resolve);
@@ -171,25 +152,40 @@ const waitForEvent = (emitter: EventEmitter, name: string): Promise<void> => {
 };
 
 export class ExecProcess implements Result {
-  protected _process: ChildProcess;
+  protected _process?: ChildProcess;
   protected _aborted: boolean = false;
-  protected _options?: ExecProcessOptions;
+  protected _options: Partial<Options>;
+  protected _command: string;
+  protected _args: string[];
+  protected _resolveClose?: () => void;
+  protected _processClosed: Promise<void>;
 
-  public get process(): ChildProcess {
+  public get process(): ChildProcess | undefined {
     return this._process;
   }
 
   public get pid(): number | undefined {
-    return this._process.pid;
+    return this._process?.pid;
   }
 
-  public constructor(proc: ChildProcess, options?: ExecProcessOptions) {
-    this._process = proc;
-    this._options = options;
+  public constructor(
+    command: string,
+    args?: string[],
+    options?: Partial<Options>
+  ) {
+    this._options = {
+      ...defaultOptions,
+      ...options
+    };
+    this._command = command;
+    this._args = args ?? [];
+    this._processClosed = new Promise<void>((resolve) => {
+      this._resolveClose = resolve;
+    });
   }
 
-  public kill(signal?: Parameters<ChildProcess['kill']>[0]): boolean {
-    return this._process.kill(signal);
+  public kill(signal?: KillSignal): boolean {
+    return this._process?.kill(signal) === true;
   }
 
   public get aborted(): boolean {
@@ -197,7 +193,7 @@ export class ExecProcess implements Result {
   }
 
   public get killed(): boolean {
-    return this._process.killed;
+    return this._process?.killed === true;
   }
 
   public pipe(
@@ -213,6 +209,10 @@ export class ExecProcess implements Result {
 
   async *[Symbol.asyncIterator](): AsyncIterator<string> {
     const proc = this._process;
+    if (!proc) {
+      return;
+    }
+
     const sources: Readable[] = [];
     if (proc.stderr) {
       sources.push(proc.stderr);
@@ -233,26 +233,23 @@ export class ExecProcess implements Result {
     onfulfilled?: ((value: Output) => TResult1 | PromiseLike<TResult1>) | null,
     _onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
   ): PromiseLike<TResult1 | TResult2> {
-    return new Promise<TResult1 | TResult2>(async (resolve) => {
-      if (this._options?.parent) {
-        await this._options.parent;
+    return new Promise<TResult1 | TResult2>(async (resolve, reject) => {
+      if (this._options?.stdin) {
+        await this._options.stdin;
       }
 
       const proc = this._process;
 
-      const [stderr, stdout, err] = await Promise.all([
+      if (!proc) {
+        reject(new Error('No process was started'));
+        return;
+      }
+
+      const [stderr, stdout] = await Promise.all([
         proc.stderr && readStreamAsString(proc.stderr),
         proc.stdout && readStreamAsString(proc.stdout),
-        waitForEventOrClose<[Error]>(proc, 'error'),
-        waitForEvent(proc, 'close')
+        this._processClosed
       ]);
-
-      if (err) {
-        if (err instanceof Error && err.name === 'AbortError') {
-          this._aborted = true;
-        }
-        // TODO handle other errors
-      }
 
       const result: Output = {
         stderr: stderr ?? '',
@@ -266,6 +263,67 @@ export class ExecProcess implements Result {
       }
     });
   }
+
+  public spawn(): void {
+    const cwd = getCwd();
+    const options = this._options;
+    const nodeOptions = {
+      ...defaultNodeOptions,
+      ...options.nodeOptions
+    };
+
+    if (options.timeout !== undefined) {
+      nodeOptions.timeout = options.timeout;
+    }
+
+    if (options.signal !== undefined) {
+      nodeOptions.signal = options.signal;
+    }
+
+    if (options.persist === true) {
+      nodeOptions.detached = true;
+    }
+
+    nodeOptions.env = computeEnv(cwd, nodeOptions.env);
+
+    const {command: normalisedCommand, args: normalisedArgs} =
+      normaliseCommandAndArgs(this._command, this._args);
+
+    let handle;
+
+    try {
+      handle = spawn(normalisedCommand, normalisedArgs, nodeOptions);
+    } catch (err) {
+      // TODO (jg): handle errors
+      throw err;
+    }
+
+    this._process = handle;
+    handle.once('error', this._onError);
+    handle.once('close', this._onClose);
+
+    if (options.stdin !== undefined && handle.stdin && options.stdin.process) {
+      const {stdout} = options.stdin.process;
+      if (stdout) {
+        stdout.pipe(handle.stdin);
+      }
+    }
+  }
+
+  protected _onError = (err: Error): void => {
+    if (err.name === 'AbortError') {
+      this._aborted = true;
+      return;
+    }
+    // TODO emit this somewhere
+    throw err;
+  };
+
+  protected _onClose = (): void => {
+    if (this._resolveClose) {
+      this._resolveClose();
+    }
+  };
 }
 
 const combineStreams = (streams: Readable[]): Readable => {
@@ -286,49 +344,9 @@ const combineStreams = (streams: Readable[]): Readable => {
 };
 
 export const exec: TinyExec = (command, args, userOptions) => {
-  const options = {
-    ...defaultOptions,
-    ...userOptions
-  };
-  const nodeOptions = {
-    ...defaultNodeOptions,
-    ...options.nodeOptions
-  };
+  const proc = new ExecProcess(command, args, userOptions);
 
-  if (options.timeout !== undefined) {
-    nodeOptions.timeout = options.timeout;
-  }
+  proc.spawn();
 
-  if (options.signal !== undefined) {
-    nodeOptions.signal = options.signal;
-  }
-
-  if (options.persist === true) {
-    nodeOptions.detached = true;
-  }
-
-  const cwd = getCwd();
-
-  nodeOptions.env = computeEnv(cwd, nodeOptions.env);
-
-  const {command: normalisedCommand, args: normalisedArgs} =
-    normaliseCommandAndArgs(command, args);
-
-  let handle;
-
-  try {
-    handle = spawn(normalisedCommand, normalisedArgs, nodeOptions);
-  } catch (err) {
-    // TODO (jg): handle errors
-    throw err;
-  }
-
-  if (options.stdin !== undefined && handle.stdin) {
-    const {stdout} = options.stdin.process;
-    if (stdout) {
-      stdout.pipe(handle.stdin);
-    }
-  }
-
-  return new ExecProcess(handle, {parent: options.stdin});
+  return proc;
 };
