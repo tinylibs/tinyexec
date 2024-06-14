@@ -32,6 +32,24 @@ for await (const line of result) {
 }
 ```
 
+### Options
+
+Options can be passed to have finer control over spawning of the process:
+
+```ts
+await x('ls', [], {
+  timeout: 1000
+});
+```
+
+The options object can have the following properties:
+
+- `signal` - an `AbortSignal` to allow aborting of the execution
+- `timeout` - time in milliseconds at which the process will be forceably killed
+- `persist` - if `true`, the process will continue after the host exits
+- `stdin` - another `Result` can be used as the input to this process
+- `nodeOptions` - any valid options to node's underlying `spawn` function
+
 ### Piping to another process
 
 You can pipe a process to another via the `pipe` method:
