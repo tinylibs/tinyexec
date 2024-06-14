@@ -1,13 +1,9 @@
 import {type ChildProcess, type SpawnOptions, spawn} from 'node:child_process';
-import {type EventEmitter} from 'node:events';
-import {PassThrough, type Readable} from 'node:stream';
-import {
-  normalize as normalizePath,
-  delimiter as pathDelimiter,
-  resolve as resolvePath,
-  dirname
-} from 'node:path';
+import {type Readable} from 'node:stream';
+import {normalize as normalizePath} from 'node:path';
 import {cwd as getCwd} from 'node:process';
+import {computeEnv} from './env.js';
+import {waitForEvent, readStreamAsString, combineStreams} from './stream.js';
 
 export interface Output {
   stderr: string;
@@ -34,7 +30,7 @@ export interface OutputApi extends AsyncIterable<string> {
   get exitCode(): number | undefined;
 }
 
-type Result = PromiseLike<Output> & OutputApi;
+export type Result = PromiseLike<Output> & OutputApi;
 
 export interface Options {
   signal: AbortSignal;
@@ -72,85 +68,6 @@ function normaliseCommandAndArgs(
     args: normalisedArgs
   };
 }
-
-type EnvLike = SpawnOptions['env'];
-
-interface EnvPathInfo {
-  key: string;
-  value: string;
-}
-
-const isPathLikePattern = /^path$/i;
-const defaultEnvPathInfo = {key: 'PATH', value: ''};
-
-function getPathFromEnv(env: EnvLike): EnvPathInfo {
-  for (const key in env) {
-    if (!Object.hasOwn(env, key) || !isPathLikePattern.test(key)) {
-      continue;
-    }
-
-    const value = env[key];
-
-    if (!value) {
-      return defaultEnvPathInfo;
-    }
-
-    return {key, value};
-  }
-  return defaultEnvPathInfo;
-}
-
-function addNodeBinToPath(cwd: string, path: EnvPathInfo): EnvPathInfo {
-  const parts = path.value.split(pathDelimiter);
-
-  let currentPath = cwd;
-  let lastPath: string;
-
-  do {
-    parts.push(resolvePath(currentPath, 'node_modules', '.bin'));
-    lastPath = currentPath;
-    currentPath = dirname(currentPath);
-  } while (currentPath !== lastPath);
-
-  return {key: path.key, value: parts.join(pathDelimiter)};
-}
-
-function computeEnv(cwd: string, env: EnvLike): EnvLike {
-  const envWithDefault = {
-    ...process.env,
-    ...env
-  };
-  const envPathInfo = addNodeBinToPath(cwd, getPathFromEnv(envWithDefault));
-  envWithDefault[envPathInfo.key] = envPathInfo.value;
-
-  return envWithDefault;
-}
-
-const readStreamAsString = (stream: Readable): Promise<string> => {
-  return new Promise<string>((resolve, reject) => {
-    let result = '';
-    const onDataReceived = (chunk: Buffer | string): void => {
-      result += chunk.toString();
-    };
-
-    stream.once('error', (err) => {
-      reject(err);
-    });
-
-    stream.on('data', onDataReceived);
-
-    stream.once('end', () => {
-      stream.removeListener('data', onDataReceived);
-      resolve(result);
-    });
-  });
-};
-
-const waitForEvent = (emitter: EventEmitter, name: string): Promise<void> => {
-  return new Promise((resolve) => {
-    emitter.on(name, resolve);
-  });
-};
 
 export class ExecProcess implements Result {
   protected _process?: ChildProcess;
@@ -333,23 +250,6 @@ export class ExecProcess implements Result {
     }
   };
 }
-
-const combineStreams = (streams: Readable[]): Readable => {
-  let streamCount = streams.length;
-  const combined = new PassThrough();
-  const maybeEmitEnd = () => {
-    if (--streamCount === 0) {
-      combined.emit('end');
-    }
-  };
-
-  for (const stream of streams) {
-    stream.pipe(combined, {end: false});
-    stream.on('end', maybeEmitEnd);
-  }
-
-  return combined;
-};
 
 export const exec: TinyExec = (command, args, userOptions) => {
   const proc = new ExecProcess(command, args, userOptions);
