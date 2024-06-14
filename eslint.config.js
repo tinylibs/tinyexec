@@ -15,5 +15,14 @@ export default [
     rules: {
       '@typescript-eslint/no-unused-vars': 'off'
     }
+  },
+  {
+    files: [
+      'src/test/**/*.ts'
+    ],
+    rules: {
+      '@typescript-eslint/no-dynamic-delete': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'off'
+    }
   }
 ];
