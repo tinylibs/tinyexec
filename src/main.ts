@@ -3,7 +3,7 @@ import {type Readable} from 'node:stream';
 import {normalize as normalizePath} from 'node:path';
 import {cwd as getCwd} from 'node:process';
 import {computeEnv} from './env.js';
-import {waitForEvent, readStreamAsString, combineStreams} from './stream.js';
+import {readStreamAsString, combineStreams} from './stream.js';
 
 export interface Output {
   stderr: string;
@@ -151,7 +151,7 @@ export class ExecProcess implements Result {
       yield chunk.toString();
     }
 
-    await waitForEvent(proc, 'close');
+    await this._processClosed;
   }
 
   public then<TResult1 = Output, TResult2 = never>(
