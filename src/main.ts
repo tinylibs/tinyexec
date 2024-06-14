@@ -31,6 +31,7 @@ export interface OutputApi extends AsyncIterable<string> {
   get pid(): number | undefined;
   get aborted(): boolean;
   get killed(): boolean;
+  get exitCode(): number | undefined;
 }
 
 type Result = PromiseLike<Output> & OutputApi;
@@ -166,6 +167,13 @@ export class ExecProcess implements Result {
 
   public get pid(): number | undefined {
     return this._process?.pid;
+  }
+
+  public get exitCode(): number | undefined {
+    if (this._process && this._process.exitCode !== null) {
+      return this._process.exitCode;
+    }
+    return undefined;
   }
 
   public constructor(
