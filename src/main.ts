@@ -154,39 +154,36 @@ export class ExecProcess implements Result {
     await this._processClosed;
   }
 
-  public then<TResult1 = Output, TResult2 = never>(
+  public async then<TResult1 = Output, TResult2 = never>(
     onfulfilled?: ((value: Output) => TResult1 | PromiseLike<TResult1>) | null,
     _onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
-  ): PromiseLike<TResult1 | TResult2> {
-    return new Promise<TResult1 | TResult2>(async (resolve, reject) => {
-      if (this._options?.stdin) {
-        await this._options.stdin;
-      }
+  ): Promise<TResult1 | TResult2> {
+    if (this._options?.stdin) {
+      await this._options.stdin;
+    }
 
-      const proc = this._process;
+    const proc = this._process;
 
-      if (!proc) {
-        reject(new Error('No process was started'));
-        return;
-      }
+    if (!proc) {
+      throw new Error('No process was started');
+    }
 
-      const [stderr, stdout] = await Promise.all([
-        proc.stderr && readStreamAsString(proc.stderr),
-        proc.stdout && readStreamAsString(proc.stdout),
-        this._processClosed
-      ]);
+    const [stderr, stdout] = await Promise.all([
+      proc.stderr && readStreamAsString(proc.stderr),
+      proc.stdout && readStreamAsString(proc.stdout),
+      this._processClosed
+    ]);
 
-      const result: Output = {
-        stderr: stderr ?? '',
-        stdout: stdout ?? ''
-      };
+    const result: Output = {
+      stderr: stderr ?? '',
+      stdout: stdout ?? ''
+    };
 
-      if (onfulfilled) {
-        resolve(onfulfilled(result));
-      } else {
-        resolve(result as TResult1);
-      }
-    });
+    if (onfulfilled) {
+      return onfulfilled(result);
+    } else {
+      return result as TResult1;
+    }
   }
 
   public spawn(): void {
@@ -214,14 +211,7 @@ export class ExecProcess implements Result {
     const {command: normalisedCommand, args: normalisedArgs} =
       normaliseCommandAndArgs(this._command, this._args);
 
-    let handle;
-
-    try {
-      handle = spawn(normalisedCommand, normalisedArgs, nodeOptions);
-    } catch (err) {
-      // TODO (jg): handle errors
-      throw err;
-    }
+    const handle = spawn(normalisedCommand, normalisedArgs, nodeOptions);
 
     this._process = handle;
     handle.once('error', this._onError);
