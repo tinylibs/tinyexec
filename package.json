@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "type": "module",
   "description": "A minimal library for executing processes in Node",
-  "main": "lib/main.js",
+  "main": "./dist/commonjs/main.js",
   "files": [
     "dist",
     "!dist/node_modules",
@@ -11,10 +11,11 @@
     "!dist/esm/test"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --noEmit",
     "test": "npm run build && node --test dist/esm/test",
     "lint": "eslint src",
     "format": "prettier --write src",
+    "format:check": "prettier --check src",
     "prepare": "tshy"
   },
   "repository": {
@@ -52,5 +53,19 @@
     "tshy": "^1.14.0",
     "typescript": "^5.4.5",
     "typescript-eslint": "^7.7.0"
-  }
+  },
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/esm/main.d.ts",
+        "default": "./dist/esm/main.js"
+      },
+      "require": {
+        "types": "./dist/commonjs/main.d.ts",
+        "default": "./dist/commonjs/main.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "types": "./dist/commonjs/main.d.ts"
 }

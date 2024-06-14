@@ -1,4 +1,5 @@
 /.tshy
 /node_modules
 /lib
+/dist
 *.swp
