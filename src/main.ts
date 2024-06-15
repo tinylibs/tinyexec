@@ -4,6 +4,7 @@ import {normalize as normalizePath} from 'node:path';
 import {cwd as getCwd} from 'node:process';
 import {computeEnv} from './env.js';
 import {readStreamAsString, combineStreams} from './stream.js';
+import readline from 'node:readline';
 
 export interface Output {
   stderr: string;
@@ -146,8 +147,11 @@ export class ExecProcess implements Result {
       sources.push(proc.stdout);
     }
     const combined = combineStreams(sources);
+    const rl = readline.createInterface({
+      input: combined
+    });
 
-    for await (const chunk of combined) {
+    for await (const chunk of rl) {
       yield chunk.toString();
     }
 
