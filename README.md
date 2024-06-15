@@ -132,6 +132,12 @@ x('ls', ['-l'])
   .pipe('grep', ['js']);
 ```
 
+The parameters are as follows:
+
+- `command` - the command to execute (_without any arguments_)
+- `args` - an array of arguments
+- `options` - options object
+
 ### `process`
 
 The underlying node `ChildProcess`. For example:
