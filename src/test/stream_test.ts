@@ -1,4 +1,4 @@
-import {combineStreams, waitForEvent, readStreamAsString} from '../stream.js';
+import {combineStreams, waitForEvent} from '../stream.js';
 import * as assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {EventEmitter} from 'node:events';
@@ -10,36 +10,6 @@ test('waitForEvent', async (t) => {
     const waiter = waitForEvent(emitter, 'foo');
     emitter.emit('foo');
     await waiter;
-  });
-});
-
-test('readStreamAsString', async (t) => {
-  await t.test('rejects on error', async () => {
-    const streamError = new Error('fudge');
-    const stream = new Readable({
-      read() {
-        this.destroy(streamError);
-      }
-    });
-    await assert.rejects(readStreamAsString(stream), streamError);
-  });
-
-  await t.test('resolves to concatenated data', async () => {
-    const stream = Readable.from(['foo', 'bar']);
-    const result = await readStreamAsString(stream);
-    assert.equal(result, 'foobar');
-  });
-
-  await t.test('handles buffer data', async () => {
-    const stream = new Readable({
-      read() {
-        this.push(Buffer.from('foo'));
-        this.push(Buffer.from('bar'));
-        this.push(null);
-      }
-    });
-    const result = await readStreamAsString(stream);
-    assert.equal(result, 'foobar');
   });
 });
 

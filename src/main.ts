@@ -3,7 +3,7 @@ import {type Readable} from 'node:stream';
 import {normalize as normalizePath} from 'node:path';
 import {cwd as getCwd} from 'node:process';
 import {computeEnv} from './env.js';
-import {readStreamAsString, combineStreams} from './stream.js';
+import {combineStreams} from './stream.js';
 import readline from 'node:readline';
 
 export interface Output {
@@ -156,24 +156,24 @@ export class ExecProcess implements Result {
 
   async *[Symbol.asyncIterator](): AsyncIterator<string> {
     const proc = this._process;
+
     if (!proc) {
       return;
     }
 
-    if (this._thrownError) {
-      throw this._thrownError;
+    const streams: Readable[] = [];
+
+    if (this._streamErr) {
+      streams.push(this._streamErr);
+    }
+    if (this._streamOut) {
+      streams.push(this._streamOut);
     }
 
-    const sources: Readable[] = [];
-    if (proc.stderr) {
-      sources.push(proc.stderr);
-    }
-    if (proc.stdout) {
-      sources.push(proc.stdout);
-    }
-    const combined = combineStreams(sources);
+    const streamCombined = combineStreams(streams);
+
     const rl = readline.createInterface({
-      input: combined
+      input: streamCombined
     });
 
     for await (const chunk of rl) {
@@ -181,6 +181,12 @@ export class ExecProcess implements Result {
     }
 
     await this._processClosed;
+
+    proc.removeAllListeners();
+
+    if (this._thrownError) {
+      throw this._thrownError;
+    }
   }
 
   protected async _waitForOutput(): Promise<Output> {
@@ -194,6 +200,21 @@ export class ExecProcess implements Result {
       throw new Error('No process was started');
     }
 
+    let stderr = '';
+    let stdout = '';
+
+    if (this._streamErr) {
+      for await (const chunk of this._streamErr) {
+        stderr += chunk.toString();
+      }
+    }
+
+    if (this._streamOut) {
+      for await (const chunk of this._streamOut) {
+        stdout += chunk.toString();
+      }
+    }
+
     await this._processClosed;
 
     proc.removeAllListeners();
@@ -202,14 +223,9 @@ export class ExecProcess implements Result {
       throw this._thrownError;
     }
 
-    const [stderr, stdout] = await Promise.all([
-      proc.stderr && readStreamAsString(proc.stderr),
-      proc.stdout && readStreamAsString(proc.stdout)
-    ]);
-
     const result: Output = {
-      stderr: stderr ?? '',
-      stdout: stdout ?? ''
+      stderr,
+      stdout
     };
 
     return result;
@@ -222,6 +238,9 @@ export class ExecProcess implements Result {
     return this._waitForOutput().then(onfulfilled, onrejected);
   }
 
+  protected _streamOut?: Readable;
+  protected _streamErr?: Readable;
+
   public spawn(): void {
     const cwd = getCwd();
     const options = this._options;
@@ -229,8 +248,9 @@ export class ExecProcess implements Result {
       ...defaultNodeOptions,
       ...options.nodeOptions
     };
-
     const signals: AbortSignal[] = [];
+
+    this._resetState();
 
     if (options.timeout !== undefined) {
       signals.push(AbortSignal.timeout(options.timeout));
@@ -255,6 +275,13 @@ export class ExecProcess implements Result {
 
     const handle = spawn(normalisedCommand, normalisedArgs, nodeOptions);
 
+    if (handle.stderr) {
+      this._streamErr = handle.stderr;
+    }
+    if (handle.stdout) {
+      this._streamOut = handle.stdout;
+    }
+
     this._process = handle;
     handle.once('error', this._onError);
     handle.once('close', this._onClose);
@@ -265,6 +292,14 @@ export class ExecProcess implements Result {
         stdout.pipe(handle.stdin);
       }
     }
+  }
+
+  protected _resetState(): void {
+    this._aborted = false;
+    this._processClosed = new Promise<void>((resolve) => {
+      this._resolveClose = resolve;
+    });
+    this._thrownError = undefined;
   }
 
   protected _onError = (err: Error): void => {

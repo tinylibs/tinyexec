@@ -1,26 +1,6 @@
 import {type EventEmitter} from 'node:events';
 import {type Readable, PassThrough} from 'node:stream';
 
-export const readStreamAsString = (stream: Readable): Promise<string> => {
-  return new Promise<string>((resolve, reject) => {
-    let result = '';
-    const onDataReceived = (chunk: Buffer | string): void => {
-      result += chunk.toString();
-    };
-
-    stream.once('error', (err) => {
-      reject(err);
-    });
-
-    stream.on('data', onDataReceived);
-
-    stream.once('end', () => {
-      stream.removeListener('data', onDataReceived);
-      resolve(result);
-    });
-  });
-};
-
 export const waitForEvent = (
   emitter: EventEmitter,
   name: string
