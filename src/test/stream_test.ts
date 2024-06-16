@@ -21,12 +21,7 @@ test('readStreamAsString', async (t) => {
         this.destroy(streamError);
       }
     });
-    try {
-      await readStreamAsString(stream);
-      assert.fail('expected to throw');
-    } catch (err) {
-      assert.equal(err, streamError);
-    }
+    await assert.rejects(readStreamAsString(stream), streamError);
   });
 
   await t.test('resolves to concatenated data', async () => {
