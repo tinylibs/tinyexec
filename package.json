@@ -1,6 +1,6 @@
 {
   "name": "tinyexec",
-  "version": "0.0.1",
+  "version": "0.0.0-dev",
   "type": "module",
   "description": "A minimal library for executing processes in Node",
   "main": "./dist/commonjs/main.js",
