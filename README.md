@@ -1,4 +1,4 @@
-# tinyexec
+# tinyexec 📟
 
 > A minimal package for executing commands
 
