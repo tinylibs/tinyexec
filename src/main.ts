@@ -5,6 +5,7 @@ import {cwd as getCwd} from 'node:process';
 import {computeEnv} from './env.js';
 import {combineStreams} from './stream.js';
 import readline from 'node:readline';
+import {_parse} from 'cross-spawn';
 
 export interface Output {
   stderr: string;
@@ -190,10 +191,6 @@ export class ExecProcess implements Result {
   }
 
   protected async _waitForOutput(): Promise<Output> {
-    if (this._options?.stdin) {
-      await this._options.stdin;
-    }
-
     const proc = this._process;
 
     if (!proc) {
@@ -216,6 +213,10 @@ export class ExecProcess implements Result {
     }
 
     await this._processClosed;
+
+    if (this._options?.stdin) {
+      await this._options.stdin;
+    }
 
     proc.removeAllListeners();
 
@@ -273,7 +274,13 @@ export class ExecProcess implements Result {
     const {command: normalisedCommand, args: normalisedArgs} =
       normaliseCommandAndArgs(this._command, this._args);
 
-    const handle = spawn(normalisedCommand, normalisedArgs, nodeOptions);
+    const crossResult = _parse(normalisedCommand, normalisedArgs, nodeOptions);
+
+    const handle = spawn(
+      crossResult.command,
+      crossResult.args,
+      crossResult.options
+    );
 
     if (handle.stderr) {
       this._streamErr = handle.stderr;

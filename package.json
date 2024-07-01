@@ -11,12 +11,14 @@
     "!dist/esm/test"
   ],
   "scripts": {
-    "build": "tsc",
-    "test": "npm run build && c8 node --test",
-    "lint": "eslint src",
+    "build": "npm run build:types && tsup",
+    "build:types": "tsc",
+    "dev": "tsup --watch",
     "format": "prettier --write src",
     "format:check": "prettier --check src",
-    "prepare": "tshy"
+    "lint": "eslint src",
+    "prepare": "npm run build",
+    "test": "npm run build && c8 node --test"
   },
   "repository": {
     "type": "git",
@@ -34,38 +36,29 @@
   "bugs": {
     "url": "https://github.com/tinylibs/tinyexec/issues"
   },
-  "tshy": {
-    "exclude": [
-      "src/test"
-    ],
-    "exports": {
-      ".": "./src/main.ts",
-      "./package.json": "./package.json"
-    }
-  },
   "homepage": "https://github.com/tinylibs/tinyexec#readme",
   "devDependencies": {
     "@eslint/js": "^9.0.0",
+    "@types/cross-spawn": "^6.0.6",
     "@types/node": "^20.12.7",
     "c8": "^9.1.0",
+    "cross-spawn": "^7.0.3",
     "eslint-config-google": "^0.14.0",
     "prettier": "^3.2.5",
-    "tshy": "^1.14.0",
+    "tsup": "^8.1.0",
     "typescript": "^5.4.5",
     "typescript-eslint": "^7.7.0"
   },
   "exports": {
     ".": {
       "import": {
-        "types": "./dist/esm/main.d.ts",
-        "default": "./dist/esm/main.js"
+        "default": "./dist/main.js"
       },
       "require": {
-        "types": "./dist/commonjs/main.d.ts",
-        "default": "./dist/commonjs/main.js"
+        "default": "./dist/main.cjs"
       }
     },
     "./package.json": "./package.json"
   },
-  "types": "./dist/commonjs/main.d.ts"
+  "types": "./dist/main.d.ts"
 }
