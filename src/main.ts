@@ -191,10 +191,6 @@ export class ExecProcess implements Result {
   }
 
   protected async _waitForOutput(): Promise<Output> {
-    if (this._options?.stdin) {
-      await this._options.stdin;
-    }
-
     const proc = this._process;
 
     if (!proc) {
@@ -217,6 +213,10 @@ export class ExecProcess implements Result {
     }
 
     await this._processClosed;
+
+    if (this._options?.stdin) {
+      await this._options.stdin;
+    }
 
     proc.removeAllListeners();
 

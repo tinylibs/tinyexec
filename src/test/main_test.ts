@@ -28,16 +28,22 @@ test('exec', async (t) => {
 
     assert.deepEqual(lines, ['foo', 'bar']);
   });
+
+  await t.test('resolves to stdout', async () => {
+    const result = await x('node', ['-e', "console.log('foo')"]);
+    assert.equal(result.stdout, 'foo\n');
+    assert.equal(result.stderr, '');
+  });
+
+  await t.test('captures stderr', async () => {
+    const result = await x('node', ['-e', "console.error('some error')"]);
+    assert.equal(result.stderr, 'some error\n');
+    assert.equal(result.stdout, '');
+  });
 });
 
 if (isWindows) {
   test('exec (windows)', async (t) => {
-    await t.test('resolves to stdout', async () => {
-      const result = await x('echo', ['foo']);
-      assert.equal(result.stdout, '"foo"\r\n');
-      assert.equal(result.stderr, '');
-    });
-
     await t.test('times out after defined timeout (ms)', async () => {
       // Somewhat filthy way of waiting for 2 seconds across cmd/ps
       const proc = x('ping', ['127.0.0.1', '-n', '2'], {timeout: 100});
@@ -58,15 +64,6 @@ if (isWindows) {
       assert.equal(result.stdout, '');
     });
 
-    await t.test('captures stderr', async () => {
-      const result = await x('type', ['nonexistentforsure']);
-      assert.equal(
-        result.stderr,
-        'The system cannot find the file specified.\r\n'
-      );
-      assert.equal(result.stdout, '');
-    });
-
     await t.test('kill terminates the process', async () => {
       // Somewhat filthy way of waiting for 2 seconds across cmd/ps
       const proc = x('ping', ['127.0.0.1', '-n', '2']);
@@ -77,12 +74,12 @@ if (isWindows) {
     });
 
     await t.test('pipe correctly pipes output', async () => {
-      const echoProc = x('echo', ['foo']);
+      const echoProc = x('node', ['-e', "console.log('foo')"]);
       const grepProc = echoProc.pipe('findstr', ['f']);
       const result = await grepProc;
 
       assert.equal(result.stderr, '');
-      assert.equal(result.stdout, '"foo"\r\n');
+      assert.equal(result.stdout, 'foo\n');
       assert.equal(echoProc.exitCode, 0);
       assert.equal(grepProc.exitCode, 0);
     });
@@ -119,12 +116,6 @@ if (isWindows) {
 
 if (!isWindows) {
   test('exec (unix-like)', async (t) => {
-    await t.test('resolves to stdout', async () => {
-      const result = await x('echo', ['foo']);
-      assert.equal(result.stdout, 'foo\n');
-      assert.equal(result.stderr, '');
-    });
-
     await t.test('times out after defined timeout (ms)', async () => {
       const proc = x('sleep', ['0.2s'], {timeout: 100});
       await assert.rejects(async () => {
@@ -139,15 +130,6 @@ if (!isWindows) {
       await assert.rejects(async () => {
         await proc;
       }, 'spawn definitelyNonExistent NOENT');
-    });
-
-    await t.test('captures stderr', async () => {
-      const result = await x('cat', ['nonexistentforsure']);
-      assert.equal(
-        result.stderr,
-        'cat: nonexistentforsure: No such file or directory\n'
-      );
-      assert.equal(result.stdout, '');
     });
 
     await t.test('kill terminates the process', async () => {
