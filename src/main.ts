@@ -1,11 +1,11 @@
-import {type ChildProcess, type SpawnOptions} from 'node:child_process';
+import {type ChildProcess, type SpawnOptions, spawn} from 'node:child_process';
 import {type Readable} from 'node:stream';
 import {normalize as normalizePath} from 'node:path';
 import {cwd as getCwd} from 'node:process';
 import {computeEnv} from './env.js';
 import {combineStreams} from './stream.js';
 import readline from 'node:readline';
-import {spawn} from 'cross-spawn';
+import {_parse} from 'cross-spawn';
 
 export interface Output {
   stderr: string;
@@ -274,7 +274,13 @@ export class ExecProcess implements Result {
     const {command: normalisedCommand, args: normalisedArgs} =
       normaliseCommandAndArgs(this._command, this._args);
 
-    const handle = spawn(normalisedCommand, normalisedArgs, nodeOptions);
+    const crossResult = _parse(normalisedCommand, normalisedArgs, nodeOptions);
+
+    const handle = spawn(
+      crossResult.command,
+      crossResult.args,
+      crossResult.options
+    );
 
     if (handle.stderr) {
       this._streamErr = handle.stderr;

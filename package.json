@@ -12,7 +12,7 @@
   ],
   "scripts": {
     "build": "npm run build:types && tsup",
-    "build:types": "tsc --noEmit",
+    "build:types": "tsc",
     "dev": "tsup --watch",
     "format": "prettier --write src",
     "format:check": "prettier --check src",
