@@ -1,10 +1,11 @@
-import {type ChildProcess, type SpawnOptions, spawn} from 'node:child_process';
+import {type ChildProcess, type SpawnOptions} from 'node:child_process';
 import {type Readable} from 'node:stream';
 import {normalize as normalizePath} from 'node:path';
 import {cwd as getCwd} from 'node:process';
 import {computeEnv} from './env.js';
 import {combineStreams} from './stream.js';
 import readline from 'node:readline';
+import {spawn} from 'cross-spawn';
 
 export interface Output {
   stderr: string;
