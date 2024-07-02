@@ -52,12 +52,12 @@
   "exports": {
     ".": {
       "import": {
-        "default": "./dist/main.js",
-        "types": "./dist/main.d.ts"
+        "types": "./dist/main.d.ts",
+        "default": "./dist/main.js"
       },
       "require": {
-        "default": "./dist/main.cjs",
-        "types": "./dist/main.d.cts"
+        "types": "./dist/main.d.cts",
+        "default": "./dist/main.cjs"
       }
     },
     "./package.json": "./package.json"
