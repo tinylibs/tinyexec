@@ -16,6 +16,8 @@ $ npm i -S tinyexec
 A process can be spawned and awaited like so:
 
 ```ts
+import {x} from 'tinyexec';
+
 const result = await x('ls', ['-l']);
 
 // result.stdout - the stdout as a string
@@ -25,6 +27,8 @@ const result = await x('ls', ['-l']);
 You may also iterate over the lines of output via an async loop:
 
 ```ts
+import {x} from 'tinyexec';
+
 const result = x('ls', ['-l']);
 
 for await (const line of result) {
