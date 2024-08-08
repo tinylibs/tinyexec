@@ -1,8 +1,9 @@
-import { defineConfig, type Options } from "tsup";
+import { defineConfig } from "tsup";
 
-const defaultConfig: Options = {
+export default defineConfig({
   entryPoints: ["src/main.ts"],
   outDir: "dist",
+  format: ["esm", "cjs"],
   tsconfig: "./tsconfig.json",
   target: "es2022",
   minify: false,
@@ -11,16 +12,10 @@ const defaultConfig: Options = {
   minifyIdentifiers: true,
   clean: true,
   dts: true,
-};
-
-export default defineConfig([
-  {
-    ...defaultConfig,
-    format: ["esm"],
-    inject: ['tsup-require-shim.ts']
+  banner({ format }) {
+    if (format === "esm") {
+      return { js: `import { createRequire as __tinyexec_cr } from "node:module";const require = __tinyexec_cr(import.meta.url);` };
+    }
   },
-  {
-    ...defaultConfig,
-    format: ["cjs"]
-  }
-]);
+});
+
