@@ -14,7 +14,7 @@ export interface EnvPathInfo {
 const isPathLikePattern = /^path$/i;
 const defaultEnvPathInfo = {key: 'PATH', value: ''};
 
-function getPathFromEnv(env: EnvLike): EnvPathInfo {
+export function getPathFromEnv(env: EnvLike): EnvPathInfo {
   for (const key in env) {
     if (
       !Object.prototype.hasOwnProperty.call(env, key) ||

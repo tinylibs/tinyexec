@@ -117,7 +117,7 @@ if (isWindows) {
 if (!isWindows) {
   test('exec (unix-like)', async (t) => {
     await t.test('times out after defined timeout (ms)', async () => {
-      const proc = x('sleep', ['0.2s'], {timeout: 100});
+      const proc = x('sleep', ['0.2'], {timeout: 100});
       await assert.rejects(async () => {
         await proc;
       });
