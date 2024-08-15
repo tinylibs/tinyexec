@@ -47,7 +47,7 @@ export interface TinyExec {
 }
 
 const defaultOptions: Partial<Options> = {
-  timeout: 4000,
+  timeout: undefined,
   persist: false
 };
 
