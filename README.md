@@ -218,7 +218,7 @@ proc.exitCode; // number (e.g. 1)
 `tinyexec` aims to provide a lightweight layer on top of Node's own
 `child_process` API.
 
-Some clear benefits are that `tinyexec` will be much lighter, have a much
+Some clear benefits compared to other libraries are that `tinyexec` will be much lighter, have a much
 smaller footprint and will have a less abstract interface (less "magic"). It
 will also have equal security and cross-platform support to popular
 alternatives.
