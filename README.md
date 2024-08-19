@@ -212,3 +212,26 @@ const proc = x('ls');
 
 proc.exitCode; // number (e.g. 1)
 ```
+
+## Comparison with other libraries
+
+`tinyexec` aims to provide a lightweight layer on top of Node's own
+`child_process` API.
+
+Some clear benefits compared to other libraries are that `tinyexec` will be much lighter, have a much
+smaller footprint and will have a less abstract interface (less "magic"). It
+will also have equal security and cross-platform support to popular
+alternatives.
+
+There are various features other libraries include which we are unlikely
+to ever implement, as they would prevent us from providing a lightweight layer.
+
+For example, if you'd like write scripts rather than individual commands, and
+prefer to use templating, we'd definitely recommend
+[zx](https://github.com/google/zx). zx is a much higher level library which
+does some of the same work `tinyexec` does but behind a template string
+interface.
+
+Similarly, libraries like `execa` will provide helpers for various things
+like passing files as input to processes. We opt not to support features like
+this since many of them are easy to do yourself (using Node's own APIs).
