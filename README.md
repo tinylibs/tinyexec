@@ -53,6 +53,7 @@ The options object can have the following properties:
 - `persist` - if `true`, the process will continue after the host exits
 - `stdin` - another `Result` can be used as the input to this process
 - `nodeOptions` - any valid options to node's underlying `spawn` function
+- `throwOnError` - if true, non-zero exit codes will throw an error
 
 ### Piping to another process
 

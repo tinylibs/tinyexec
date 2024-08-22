@@ -1,4 +1,4 @@
-import {x} from '../main.js';
+import {x, NonZeroExitError} from '../main.js';
 import * as assert from 'node:assert/strict';
 import {test} from 'node:test';
 import os from 'node:os';
@@ -17,6 +17,14 @@ test('exec', async (t) => {
     assert.equal(proc.exitCode, undefined);
     await proc;
     assert.equal(proc.exitCode, 0);
+  });
+
+  await t.test('non-zero exitCode throws when throwOnError=true', async () => {
+    const proc = x('node', ['-e', 'process.exit(1);'], {throwOnError: true});
+    await assert.rejects(async () => {
+      await proc;
+    }, NonZeroExitError);
+    assert.equal(proc.exitCode, 1);
   });
 
   await t.test('async iterator gets correct output', async () => {
@@ -64,6 +72,25 @@ if (isWindows) {
       assert.equal(result.stdout, '');
     });
 
+    await t.test('throws spawn errors when throwOnError=true', async () => {
+      const proc = x('definitelyNonExistent', [], {throwOnError: true});
+      await assert.rejects(
+        async () => {
+          await proc;
+        },
+        (err) => {
+          assert.ok(err instanceof NonZeroExitError);
+          assert.equal(
+            err.output?.stderr,
+            "'definitelyNonExistent' is not recognized as an internal" +
+              ' or external command,\r\noperable program or batch file.\r\n'
+          );
+          assert.equal(err.output?.stdout, '');
+          return true;
+        }
+      );
+    });
+
     await t.test('kill terminates the process', async () => {
       // Somewhat filthy way of waiting for 2 seconds across cmd/ps
       const proc = x('ping', ['127.0.0.1', '-n', '2']);
@@ -100,7 +127,7 @@ if (isWindows) {
 
     await t.test('async iterator receives errors as lines', async () => {
       const proc = x('nonexistentforsure');
-      const lines = [];
+      const lines: string[] = [];
       for await (const line of proc) {
         lines.push(line);
       }
