@@ -6,6 +6,9 @@ import {computeEnv} from './env.js';
 import {combineStreams} from './stream.js';
 import readline from 'node:readline';
 import {_parse} from 'cross-spawn';
+import {NonZeroExitError} from './non-zero-exit-error.js';
+
+export {NonZeroExitError};
 
 export interface Output {
   stderr: string;
@@ -40,6 +43,7 @@ export interface Options {
   timeout: number;
   persist: boolean;
   stdin: ExecProcess;
+  throwOnError: boolean;
 }
 
 export interface TinyExec {
@@ -188,6 +192,14 @@ export class ExecProcess implements Result {
     if (this._thrownError) {
       throw this._thrownError;
     }
+
+    if (
+      this._options?.throwOnError &&
+      this.exitCode !== 0 &&
+      this.exitCode !== undefined
+    ) {
+      throw new NonZeroExitError(this);
+    }
   }
 
   protected async _waitForOutput(): Promise<Output> {
@@ -228,6 +240,14 @@ export class ExecProcess implements Result {
       stderr,
       stdout
     };
+
+    if (
+      this._options.throwOnError &&
+      this.exitCode !== 0 &&
+      this.exitCode !== undefined
+    ) {
+      throw new NonZeroExitError(this, result);
+    }
 
     return result;
   }
