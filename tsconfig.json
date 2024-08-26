@@ -3,7 +3,7 @@
     "target": "es2022",
     "module": "node16",
     "moduleResolution": "node16",
-    "types": ["node"],
+    "types": ["node", "which", "shebang-command"],
     "declaration": true,
     "outDir": "./lib",
     "importHelpers": false,
