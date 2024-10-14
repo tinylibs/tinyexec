@@ -144,7 +144,7 @@ if (isWindows) {
 if (!isWindows) {
   test('exec (unix-like)', async (t) => {
     await t.test('times out after defined timeout (ms)', async () => {
-      const proc = x('sleep', ['0.2s'], {timeout: 100});
+      const proc = x('sleep', ['0.2'], {timeout: 100});
       await assert.rejects(async () => {
         await proc;
       });
@@ -160,7 +160,7 @@ if (!isWindows) {
     });
 
     await t.test('kill terminates the process', async () => {
-      const proc = x('sleep', ['5s']);
+      const proc = x('sleep', ['5']);
       const result = proc.kill();
       assert.ok(result);
       assert.ok(proc.killed);
@@ -180,7 +180,7 @@ if (!isWindows) {
 
     await t.test('signal can be used to abort execution', async () => {
       const controller = new AbortController();
-      const proc = x('sleep', ['4s'], {signal: controller.signal});
+      const proc = x('sleep', ['4'], {signal: controller.signal});
       controller.abort();
       const result = await proc;
       assert.ok(proc.aborted);
