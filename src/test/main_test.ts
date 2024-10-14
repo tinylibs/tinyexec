@@ -15,8 +15,9 @@ test('exec', async (t) => {
   await t.test('exitCode is set correctly', async () => {
     const proc = x('echo', ['foo']);
     assert.equal(proc.exitCode, undefined);
-    await proc;
+    const result = await proc;
     assert.equal(proc.exitCode, 0);
+    assert.equal(result.exitCode, 0);
   });
 
   await t.test('non-zero exitCode throws when throwOnError=true', async () => {
@@ -107,6 +108,7 @@ if (isWindows) {
 
       assert.equal(result.stderr, '');
       assert.equal(result.stdout, 'foo\n');
+      assert.equal(result.exitCode, 0);
       assert.equal(echoProc.exitCode, 0);
       assert.equal(grepProc.exitCode, 0);
     });
@@ -174,6 +176,7 @@ if (!isWindows) {
 
       assert.equal(result.stderr, '');
       assert.equal(result.stdout, 'foo\n');
+      assert.equal(result.exitCode, 0);
       assert.equal(echoProc.exitCode, 0);
       assert.equal(grepProc.exitCode, 0);
     });
