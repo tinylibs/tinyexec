@@ -13,6 +13,7 @@ export {NonZeroExitError};
 export interface Output {
   stderr: string;
   stdout: string;
+  exitCode: number | undefined;
 }
 
 export interface PipeOptions extends Options {}
@@ -238,7 +239,8 @@ export class ExecProcess implements Result {
 
     const result: Output = {
       stderr,
-      stdout
+      stdout,
+      exitCode: this.exitCode
     };
 
     if (

@@ -22,6 +22,7 @@ const result = await x('ls', ['-l']);
 
 // result.stdout - the stdout as a string
 // result.stderr - the stderr as a string
+// result.exitCode - the process exit code as a number
 ```
 
 You may also iterate over the lines of output via an async loop:
@@ -29,9 +30,9 @@ You may also iterate over the lines of output via an async loop:
 ```ts
 import {x} from 'tinyexec';
 
-const result = x('ls', ['-l']);
+const proc = x('ls', ['-l']);
 
-for await (const line of result) {
+for await (const line of proc) {
   // line will be from stderr/stdout in the order you'd see it in a term
 }
 ```
