@@ -213,15 +213,15 @@ export class ExecProcess implements Result {
     let stderr = '';
     let stdout = '';
 
-    if (this._streamErr) {
-      for await (const chunk of this._streamErr) {
-        stderr += chunk.toString();
-      }
-    }
-
     if (this._streamOut) {
       for await (const chunk of this._streamOut) {
         stdout += chunk.toString();
+      }
+    }
+
+    if (this._streamErr) {
+      for await (const chunk of this._streamErr) {
+        stderr += chunk.toString();
       }
     }
 
