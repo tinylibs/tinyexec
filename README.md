@@ -124,6 +124,24 @@ proc.aborted; // true
 proc.killed; // true
 ```
 
+### Using with args-tokenizer
+
+[args-tokenizer](https://github.com/TrySound/args-tokenizer) is a lightweight
+library for parsing shell commands with arguments into an argv array.
+
+In this example, it is combined with tinyexec to execute a command from string.
+
+```ts
+import {x} from 'tinyexec';
+import {tokenizeArgs} from 'args-tokenizer';
+
+const commandString = 'echo "Hello, World!"';
+const [command, ...args] = tokenize(commandString);
+const result = await x(command, args);
+
+result.stdout; // Hello, World!
+```
+
 ## API
 
 Calling `x(command[, args])` returns an awaitable `Result` which has the
