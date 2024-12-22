@@ -124,12 +124,11 @@ proc.aborted; // true
 proc.killed; // true
 ```
 
-### Using with args-tokenizer
+### Using with command strings
 
-[args-tokenizer](https://github.com/TrySound/args-tokenizer) is a lightweight
-library for parsing shell commands with arguments into an argv array.
-
-In this example, it is combined with tinyexec to execute a command from string.
+If you need to continue supporting commands as strings (e.g. "command arg0 arg1"),
+you can use [args-tokenizer](https://github.com/TrySound/args-tokenizer),
+a lightweight library for parsing shell command strings into an array.
 
 ```ts
 import {x} from 'tinyexec';
