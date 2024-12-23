@@ -135,7 +135,7 @@ import {x} from 'tinyexec';
 import {tokenizeArgs} from 'args-tokenizer';
 
 const commandString = 'echo "Hello, World!"';
-const [command, ...args] = tokenize(commandString);
+const [command, ...args] = tokenizeArgs(commandString);
 const result = await x(command, args);
 
 result.stdout; // Hello, World!
