@@ -3,7 +3,7 @@ import { defineConfig } from "tsup";
 export default defineConfig({
   entryPoints: ["src/main.ts"],
   outDir: "dist",
-  format: ["esm", "cjs"],
+  format: ["esm"],
   tsconfig: "./tsconfig.json",
   target: "es2022",
   minify: false,

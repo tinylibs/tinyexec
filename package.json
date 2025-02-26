@@ -5,10 +5,7 @@
   "description": "A minimal library for executing processes in Node",
   "main": "./dist/main.js",
   "files": [
-    "dist",
-    "!dist/node_modules",
-    "!dist/cjs/test",
-    "!dist/esm/test"
+    "dist"
   ],
   "scripts": {
     "build": "npm run build:types && tsup",
@@ -54,10 +51,6 @@
       "import": {
         "types": "./dist/main.d.ts",
         "default": "./dist/main.js"
-      },
-      "require": {
-        "types": "./dist/main.d.cts",
-        "default": "./dist/main.cjs"
       }
     },
     "./package.json": "./package.json"
