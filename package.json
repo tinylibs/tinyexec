@@ -48,10 +48,8 @@
   },
   "exports": {
     ".": {
-      "import": {
-        "types": "./dist/main.d.ts",
-        "default": "./dist/main.js"
-      }
+      "types": "./dist/main.d.ts",
+      "default": "./dist/main.js"
     },
     "./package.json": "./package.json"
   },
