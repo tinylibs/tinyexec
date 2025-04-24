@@ -8,9 +8,9 @@
     "dist"
   ],
   "scripts": {
-    "build": "npm run build:types && tsup",
+    "build": "tsdown",
     "build:types": "tsc",
-    "dev": "tsup --watch",
+    "dev": "tsdown --watch",
     "format": "prettier --write src",
     "format:check": "prettier --check src",
     "lint": "eslint src",
@@ -42,7 +42,7 @@
     "cross-spawn": "^7.0.3",
     "eslint-config-google": "^0.14.0",
     "prettier": "^3.2.5",
-    "tsup": "^8.1.0",
+    "tsdown": "^0.9.6",
     "typescript": "^5.4.5",
     "typescript-eslint": "^7.7.0"
   },
