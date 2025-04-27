@@ -9,8 +9,7 @@ export default defineConfig({
     minify: {
       mangle: true,
       compress: false,
-      removeWhitespace: false,
-      deadCodeElimination: true // TODO remove me
+      removeWhitespace: false
     }
   }
 });
