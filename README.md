@@ -25,6 +25,14 @@ const result = await x('ls', ['-l']);
 // result.exitCode - the process exit code as a number
 ```
 
+By default, tinyexec does not throw on non‑zero exit codes. Check `result.exitCode` or pass `{throwOnError: true}`. 
+
+Output is returned exactly as produced; trailing newlines are not trimmed. If you need trimming, do it explicitly:
+
+```ts
+const clean = result.stdout.replace(/\r?\n$/, '');
+```
+
 You may also iterate over the lines of output via an async loop:
 
 ```ts
@@ -163,12 +171,17 @@ The parameters are as follows:
 
 ### `process`
 
-The underlying node `ChildProcess`. For example:
+The underlying Node.js `ChildProcess`. tinyexec keeps the surface minimal and does not re‑expose every child_process method/event. Use `proc.process` for advanced access (streams, events, etc.).
 
 ```ts
-const proc = x('ls');
+const proc = x('node', ['./foo.mjs']);
 
-proc.process; // ChildProcess;
+proc.process?.stdout?.on('data', (chunk) => {
+  // ...
+});
+proc.process?.once('close', (code) => {
+  // ...
+});
 ```
 
 ### `kill([signal])`
