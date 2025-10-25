@@ -4,6 +4,9 @@
   "type": "module",
   "description": "A minimal library for executing processes in Node",
   "main": "./dist/main.js",
+  "engines": {
+    "node": ">=18"
+  },
   "files": [
     "dist"
   ],
