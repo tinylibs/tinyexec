@@ -96,6 +96,14 @@ function combineSignals(signals: Iterable<AbortSignal>): AbortSignal {
   return controller.signal;
 }
 
+async function readStream(stream: Readable): Promise<string> {
+  let output = '';
+  for await (const chunk of stream) {
+    output += chunk.toString();
+  }
+  return output;
+}
+
 export class ExecProcess implements Result {
   protected _process?: ChildProcess;
   protected _aborted: boolean = false;
@@ -210,20 +218,10 @@ export class ExecProcess implements Result {
       throw new Error('No process was started');
     }
 
-    let stderr = '';
-    let stdout = '';
-
-    if (this._streamOut) {
-      for await (const chunk of this._streamOut) {
-        stdout += chunk.toString();
-      }
-    }
-
-    if (this._streamErr) {
-      for await (const chunk of this._streamErr) {
-        stderr += chunk.toString();
-      }
-    }
+    const [stdout, stderr] = await Promise.all([
+      this._streamOut ? readStream(this._streamOut) : '',
+      this._streamErr ? readStream(this._streamErr) : ''
+    ]);
 
     await this._processClosed;
 
