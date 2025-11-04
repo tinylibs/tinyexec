@@ -1,11 +1,10 @@
 import {combineStreams, waitForEvent} from '../stream.js';
-import * as assert from 'node:assert/strict';
-import {test} from 'node:test';
+import {describe, test, expect} from 'vitest';
 import {EventEmitter} from 'node:events';
 import {Readable} from 'node:stream';
 
-test('waitForEvent', async (t) => {
-  await t.test('waits for event to fire', async () => {
+describe('waitForEvent', async () => {
+  test('waits for event to fire', async () => {
     const emitter = new EventEmitter();
     const waiter = waitForEvent(emitter, 'foo');
     emitter.emit('foo');
@@ -13,8 +12,8 @@ test('waitForEvent', async (t) => {
   });
 });
 
-test('combineStreams', async (t) => {
-  await t.test('works with a single stream', async () => {
+describe('combineStreams', async () => {
+  test('works with a single stream', async () => {
     const stream = Readable.from(['foo', 'bar']);
     const combined = combineStreams([stream]);
     const chunks: string[] = [];
@@ -22,10 +21,10 @@ test('combineStreams', async (t) => {
       chunks.push(chunk.toString());
     });
     await waitForEvent(combined, 'end');
-    assert.deepEqual(chunks, ['foo', 'bar']);
+    expect(chunks).toEqual(['foo', 'bar']);
   });
 
-  await t.test('works with multiple streams', async () => {
+  test('works with multiple streams', async () => {
     const stream0 = Readable.from(['foo']);
     const stream1 = Readable.from(['bar', 'baz']);
     const combined = combineStreams([stream0, stream1]);
@@ -34,6 +33,6 @@ test('combineStreams', async (t) => {
       chunks.push(chunk.toString());
     });
     await waitForEvent(combined, 'end');
-    assert.deepEqual(chunks, ['foo', 'bar', 'baz']);
+    expect(chunks).toEqual(['foo', 'bar', 'baz']);
   });
 });

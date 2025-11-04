@@ -39,12 +39,3 @@ jobs:
           node-version: ${{ matrix.node-version }}
       - run: npm ci
       - run: npm run test
-        if: matrix.node-version != 'latest'
-        # TODO (43081j): remove the following once there's some way to
-        # tell node not to try run typescript sources in a way that doesn't
-        # break <23 node
-      - run: npm run test
-        name: "npm run test (without type stripping)"
-        env:
-          NODE_OPTIONS: --no-experimental-strip-types
-        if: matrix.node-version == 'latest'

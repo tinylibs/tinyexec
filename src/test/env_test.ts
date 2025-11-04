@@ -1,34 +1,33 @@
 import {computeEnv} from '../env.js';
-import * as assert from 'node:assert/strict';
-import {test} from 'node:test';
+import {expect, test, describe} from 'vitest';
 import process from 'node:process';
 import {sep as pathSep} from 'node:path';
 
 const pathKey = 'Path' in process.env ? 'Path' : 'PATH';
 
-test('computeEnv', async (t) => {
-  await t.test('adds node binaries to path', () => {
+describe('computeEnv', async () => {
+  test('adds node binaries to path', () => {
     const env = computeEnv(process.cwd());
     const path = env[pathKey]!;
 
-    assert.ok(path.includes(`node_modules${pathSep}.bin`));
+    expect(path.includes(`node_modules${pathSep}.bin`)).ok;
   });
 
-  await t.test('extends process env', () => {
+  test('extends process env', () => {
     const env = computeEnv(process.cwd(), {
       foo: 'bar'
     });
 
     for (const key in process.env) {
       if (key.toUpperCase() !== 'PATH') {
-        assert.equal(env[key], process.env[key]);
+        expect(env[key]).toBe(process.env[key]);
       }
     }
 
-    assert.equal(env.foo, 'bar');
+    expect(env.foo).toBe('bar');
   });
 
-  await t.test('supports case-insensitive path keys', () => {
+  test('supports case-insensitive path keys', () => {
     const originalPath = process.env[pathKey];
     try {
       delete process.env[pathKey];
@@ -37,14 +36,14 @@ test('computeEnv', async (t) => {
       });
       const keys = [...Object.keys(env)];
 
-      assert.ok(keys.includes('PatH'));
-      assert.ok(!keys.includes(pathKey));
+      expect(keys.includes('PatH')).ok;
+      expect(!keys.includes(pathKey)).ok;
     } finally {
       process.env[pathKey] = originalPath;
     }
   });
 
-  await t.test('uses default key if empty path found', () => {
+  test('uses default key if empty path found', () => {
     const originalPath = process.env[pathKey];
     try {
       delete process.env[pathKey];
@@ -52,20 +51,20 @@ test('computeEnv', async (t) => {
         PatH: undefined
       });
 
-      assert.ok(typeof env['PATH'] === 'string');
-      assert.equal(env['PatH'], undefined);
+      expect(typeof env['PATH'] === 'string').ok;
+      expect(env['PatH']).toBe(undefined);
     } finally {
       process.env[pathKey] = originalPath;
     }
   });
 
-  await t.test('uses default key if no path found', () => {
+  test('uses default key if no path found', () => {
     const originalPath = process.env[pathKey];
     try {
       delete process.env[pathKey];
       const env = computeEnv(process.cwd());
 
-      assert.ok(typeof env['PATH'] === 'string');
+      expect(typeof env['PATH'] === 'string').ok;
     } finally {
       process.env[pathKey] = originalPath;
     }
