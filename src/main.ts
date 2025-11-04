@@ -16,6 +16,7 @@ export interface Output {
   exitCode: number | undefined;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface PipeOptions extends Options {}
 
 export type KillSignal = Parameters<ChildProcess['kill']>[0];
