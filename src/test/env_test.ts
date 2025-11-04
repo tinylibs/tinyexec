@@ -1,9 +1,9 @@
-import {computeEnv} from '../env.js';
+import {computeEnv, getPathFromEnv} from '../env.js';
 import {expect, test, describe} from 'vitest';
 import process from 'node:process';
 import {sep as pathSep} from 'node:path';
 
-const pathKey = 'Path' in process.env ? 'Path' : 'PATH';
+const pathKey = getPathFromEnv(process.env).key;
 
 describe('computeEnv', async () => {
   test('adds node binaries to path', () => {
