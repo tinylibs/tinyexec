@@ -40,15 +40,15 @@
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@types/cross-spawn": "^6.0.6",
-    "@types/node": "^24.10.0",
-    "@vitest/coverage-v8": "^4.0.7",
+    "@types/node": "^24.10.1",
+    "@vitest/coverage-v8": "^4.0.13",
     "cross-spawn": "^7.0.6",
     "eslint": "^9.39.1",
     "prettier": "^3.6.2",
     "rollup-plugin-license": "^3.6.0",
-    "tsdown": "^0.9.9",
+    "tsdown": "^0.16.6",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.46.3",
+    "typescript-eslint": "^8.47.0",
     "vitest": "^4.0.7"
   },
   "exports": {
