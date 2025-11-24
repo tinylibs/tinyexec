@@ -45,6 +45,7 @@
     "cross-spawn": "^7.0.6",
     "eslint": "^9.39.1",
     "prettier": "^3.6.2",
+    "rollup-plugin-license": "^3.6.0",
     "tsdown": "^0.9.9",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.3",
