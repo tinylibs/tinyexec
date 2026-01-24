@@ -1,6 +1,6 @@
-import {x, NonZeroExitError} from '../main.js';
-import {describe, test, expect} from 'vitest';
 import os from 'node:os';
+import {describe, expect, test, vi} from 'vitest';
+import {NonZeroExitError, x} from '../main.js';
 
 const isWindows = os.platform() === 'win32';
 
@@ -38,15 +38,39 @@ describe('exec', async () => {
   });
 
   test('resolves to stdout', async () => {
+    const stdoutWrite = vi.spyOn(process.stdout, 'write');
     const result = await x('node', ['-e', "console.log('foo')"]);
     expect(result.stdout).toBe('foo\n');
     expect(result.stderr).toBe('');
+    expect(stdoutWrite).not.toHaveBeenCalled();
+  });
+
+  test('resolves to stdout - with inherit', async () => {
+    const stdoutWrite = vi.spyOn(process.stdout, 'write');
+    const result = await x('node', ['-e', "console.log('foo')"], {
+      nodeOptions: {stdio: 'inherit'}
+    });
+    expect(result.stdout).toBe('foo\n');
+    expect(result.stderr).toBe('');
+    expect(stdoutWrite).toHaveBeenCalledWith(Buffer.from('foo\n'));
   });
 
   test('captures stderr', async () => {
+    const stderrWrite = vi.spyOn(process.stderr, 'write');
     const result = await x('node', ['-e', "console.error('some error')"]);
     expect(result.stderr).toBe('some error\n');
     expect(result.stdout).toBe('');
+    expect(stderrWrite).not.toHaveBeenCalled();
+  });
+
+  test('captures stderr - with inherit', async () => {
+    const stderrWrite = vi.spyOn(process.stderr, 'write');
+    const result = await x('node', ['-e', "console.error('some error')"], {
+      nodeOptions: {stdio: 'inherit'}
+    });
+    expect(result.stderr).toBe('some error\n');
+    expect(result.stdout).toBe('');
+    expect(stderrWrite).toHaveBeenCalledWith(Buffer.from('some error\n'));
   });
 });
 

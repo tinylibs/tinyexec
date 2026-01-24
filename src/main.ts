@@ -292,6 +292,27 @@ export class ExecProcess implements Result {
 
     nodeOptions.env = computeEnv(cwd, nodeOptions.env);
 
+    // Always use 'pipe' for stdout/stderr so we can capture output
+    // If user requested 'inherit', we will forward output manually
+    const wantInheritStdout =
+      nodeOptions.stdio === 'inherit' ||
+      (Array.isArray(nodeOptions.stdio) && nodeOptions.stdio[1] === 'inherit');
+    const wantInheritStderr =
+      nodeOptions.stdio === 'inherit' ||
+      (Array.isArray(nodeOptions.stdio) && nodeOptions.stdio[2] === 'inherit');
+
+    // Force stdio to 'pipe' for stdout/stderr
+    if (nodeOptions.stdio === 'inherit') {
+      nodeOptions.stdio = ['inherit', 'pipe', 'pipe'];
+    } else if (Array.isArray(nodeOptions.stdio)) {
+      nodeOptions.stdio = [
+        nodeOptions.stdio[0] ?? 'inherit',
+        'pipe',
+        'pipe',
+        ...nodeOptions.stdio.slice(3)
+      ];
+    }
+
     const {command: normalisedCommand, args: normalisedArgs} =
       normaliseCommandAndArgs(this._command, this._args);
 
@@ -305,9 +326,19 @@ export class ExecProcess implements Result {
 
     if (handle.stderr) {
       this._streamErr = handle.stderr;
+      if (wantInheritStderr) {
+        handle.stderr.on('data', (chunk) => {
+          process.stderr.write(chunk);
+        });
+      }
     }
     if (handle.stdout) {
       this._streamOut = handle.stdout;
+      if (wantInheritStdout) {
+        handle.stdout.on('data', (chunk) => {
+          process.stdout.write(chunk);
+        });
+      }
     }
 
     this._process = handle;
