@@ -6,6 +6,7 @@ export default defineConfig({
   target: 'es2022',
   clean: true,
   dts: true,
+  inlineOnly: false,
   plugins: [
     licenses({
       thirdParty: {
@@ -24,7 +25,9 @@ export default defineConfig({
     minify: {
       mangle: true,
       compress: false,
-      removeWhitespace: false
+      codegen: {
+        removeWhitespace: false
+      }
     }
   }
 });
