@@ -1,7 +1,7 @@
 import {computeEnv, getPathFromEnv} from '../env.js';
 import {expect, test, describe} from 'vitest';
 import process from 'node:process';
-import path, {sep as pathSep} from 'node:path';
+import path, {sep as pathSep, delimiter as pathDelimiter} from 'node:path';
 
 const pathKey = getPathFromEnv(process.env).key;
 
@@ -73,8 +73,9 @@ describe('computeEnv', async () => {
   test('prepends local node_modules/.bin to PATH', () => {
     /** The original variable is just `PATH=/usr/local/bin` */
     const originalPath = path.join(pathSep, 'usr', 'local', 'bin');
+    const cwd = path.resolve(pathSep, 'one', 'two', 'three');
 
-    const env = computeEnv(path.join(pathSep, 'one', 'two', 'three'), {
+    const env = computeEnv(cwd, {
       PATH: originalPath
     });
 
@@ -91,12 +92,12 @@ describe('computeEnv', async () => {
      * @link https://github.com/npm/run-script/blob/08ad35e66f0d09ed7a6b85b9a457e54859b70acd/lib/set-path.js#L37
      */
     const expected = [
-      path.join(pathSep, 'one', 'two', 'three', 'node_modules', '.bin'),
-      path.join(pathSep, 'one', 'two', 'node_modules', '.bin'),
-      path.join(pathSep, 'one', 'node_modules', '.bin'),
-      path.join(pathSep, 'node_modules', '.bin'),
+      path.resolve(pathSep, 'one', 'two', 'three', 'node_modules', '.bin'),
+      path.resolve(pathSep, 'one', 'two', 'node_modules', '.bin'),
+      path.resolve(pathSep, 'one', 'node_modules', '.bin'),
+      path.resolve(pathSep, 'node_modules', '.bin'),
       originalPath
-    ].join(':');
+    ].join(pathDelimiter);
 
     expect(env[pathKey]).toBe(expected);
   });
