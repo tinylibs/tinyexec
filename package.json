@@ -3,7 +3,7 @@
   "version": "0.0.0-dev",
   "type": "module",
   "description": "A minimal library for executing processes in Node",
-  "main": "./dist/main.js",
+  "main": "./dist/main.mjs",
   "engines": {
     "node": ">=18"
   },
@@ -53,10 +53,10 @@
   },
   "exports": {
     ".": {
-      "types": "./dist/main.d.ts",
-      "default": "./dist/main.js"
+      "types": "./dist/main.d.mts",
+      "default": "./dist/main.mjs"
     },
     "./package.json": "./package.json"
   },
-  "types": "./dist/main.d.ts"
+  "types": "./dist/main.d.mts"
 }
