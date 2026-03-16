@@ -1,4 +1,10 @@
-import {type ChildProcess, type SpawnOptions, spawn, spawnSync, type SpawnSyncOptions} from 'node:child_process';
+import {
+  type ChildProcess,
+  type SpawnOptions,
+  spawn,
+  spawnSync,
+  type SpawnSyncOptions
+} from 'node:child_process';
 import {type Readable} from 'node:stream';
 import {normalize as normalizePath} from 'node:path';
 import {cwd as getCwd} from 'node:process';
