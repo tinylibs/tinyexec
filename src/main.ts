@@ -1,4 +1,4 @@
-import {type ChildProcess, type SpawnOptions, spawn} from 'node:child_process';
+import {type ChildProcess, type SpawnOptions, spawn, spawnSync, type SpawnSyncOptions} from 'node:child_process';
 import {type Readable} from 'node:stream';
 import {normalize as normalizePath} from 'node:path';
 import {cwd as getCwd} from 'node:process';
@@ -346,6 +346,87 @@ export class ExecProcess implements Result {
       this._resolveClose();
     }
   };
+}
+
+export interface SyncOptions {
+  nodeOptions: SpawnSyncOptions;
+  timeout: number;
+  throwOnError: boolean;
+}
+
+export interface SyncResult extends Output {
+  pid: number | undefined;
+  killed: boolean;
+  [Symbol.iterator](): Iterator<string>;
+}
+
+const defaultSyncOptions: Partial<SyncOptions> = {
+  timeout: undefined
+};
+
+export function xs(
+  command: string,
+  args?: string[],
+  options?: Partial<SyncOptions>
+): SyncResult {
+  const opts = {...defaultSyncOptions, ...options};
+  const cwd = getCwd();
+  const nodeOptions: SpawnSyncOptions = {
+    windowsHide: true,
+    ...opts.nodeOptions
+  };
+
+  nodeOptions.env = computeEnv(cwd, nodeOptions.env);
+
+  if (opts.timeout !== undefined) {
+    nodeOptions.timeout = opts.timeout;
+  }
+
+  const {command: normalisedCommand, args: normalisedArgs} =
+    normaliseCommandAndArgs(command, args);
+
+  const crossResult = _parse(
+    normalisedCommand,
+    normalisedArgs,
+    nodeOptions as SpawnOptions
+  );
+
+  const spawnResult = spawnSync(
+    crossResult.command,
+    crossResult.args,
+    crossResult.options
+  );
+
+  if (spawnResult.error) {
+    throw spawnResult.error;
+  }
+
+  const stdout = spawnResult.stdout?.toString() ?? '';
+  const stderr = spawnResult.stderr?.toString() ?? '';
+  const exitCode = spawnResult.status ?? undefined;
+  const killed = spawnResult.signal != null;
+
+  const result: SyncResult = {
+    stdout,
+    stderr,
+    exitCode,
+    pid: spawnResult.pid,
+    killed,
+    *[Symbol.iterator]() {
+      for (const text of [stdout, stderr]) {
+        if (!text) continue;
+        const lines = text.split('\n');
+        if (lines[lines.length - 1] === '') lines.pop();
+        yield* lines;
+      }
+    }
+  };
+
+  if (opts.throwOnError && exitCode !== 0 && exitCode !== undefined) {
+    throw new NonZeroExitError(result, result);
+  }
+
+  return result;
 }
 
 export const x: TinyExec = (command, args, userOptions) => {
