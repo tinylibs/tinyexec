@@ -4,7 +4,9 @@ import os from 'node:os';
 
 const isWindows = os.platform() === 'win32';
 
-describe('exec', async () => {
+const variants = [{name: 'async', x}];
+
+describe.each(variants)('exec ($name)', async ({x}) => {
   test('pid is number', async () => {
     const proc = x('echo', ['foo']);
     await proc;
@@ -51,7 +53,7 @@ describe('exec', async () => {
 });
 
 if (isWindows) {
-  describe('exec (windows)', async () => {
+  describe.each(variants)('exec (windows) ($name)', async ({x}) => {
     test('times out after defined timeout (ms)', async () => {
       // Somewhat filthy way of waiting for 2 seconds across cmd/ps
       const proc = x('ping', ['127.0.0.1', '-n', '2'], {timeout: 100});
@@ -138,7 +140,7 @@ if (isWindows) {
 }
 
 if (!isWindows) {
-  describe('exec (unix-like)', async () => {
+  describe.each(variants)('exec (unix-like) ($name)', async ({x}) => {
     test('times out after defined timeout (ms)', async () => {
       const proc = x('sleep', ['0.2'], {timeout: 100});
       await expect(async () => {
