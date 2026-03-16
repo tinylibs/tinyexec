@@ -2,7 +2,7 @@ import type {Output} from './main.js';
 
 interface ExitCodeable {
   readonly exitCode: number | null | undefined;
-  readonly pid?: number | undefined;
+  readonly pid: number | undefined | null;
 }
 
 export class NonZeroExitError extends Error {

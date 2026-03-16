@@ -415,7 +415,7 @@ export function xSync(
     *[Symbol.iterator]() {
       for (const text of [stdout, stderr]) {
         if (!text) continue;
-        const lines = text.split('\n');
+        const lines = text.split(/\r?\n/);
         if (lines[lines.length - 1] === '') lines.pop();
         yield* lines;
       }
