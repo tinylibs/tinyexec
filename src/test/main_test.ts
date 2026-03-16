@@ -1,11 +1,13 @@
-import { x, xs, NonZeroExitError } from '../main.js';
+import { x, xSync, NonZeroExitError } from '../main.js';
 import { describe, test, expect } from 'vitest';
 import os from 'node:os';
 
 const isWindows = os.platform() === 'win32';
 
-const variants = [{ name: 'async', x, isAsync: true }, { name: 'sync', x: xs, isAsync: false }];
-
+const variants = [
+  { name: 'async', x, isAsync: true },
+  { name: 'sync', x: xSync, isAsync: false }
+];
 
 describe.each(variants)('exec ($name)', ({ x, isAsync }) => {
   test('pid is number', async () => {
@@ -64,7 +66,7 @@ describe('exec (async)', () => {
 describe('exec (sync)', () => {
   test('non-zero exitCode throws when throwOnError=true', () => {
     expect(() => {
-      xs('node', ['-e', 'process.exit(1);'], { throwOnError: true });
+      xSync('node', ['-e', 'process.exit(1);'], { throwOnError: true });
     }).toThrow(NonZeroExitError);
   });
 });
@@ -158,12 +160,12 @@ if (isWindows) {
   describe('exec (windows) (sync)', () => {
     test('times out after defined timeout (ms)', () => {
       expect(() => {
-        xs('ping', ['127.0.0.1', '-n', '2'], { timeout: 100 });
+        xSync('ping', ['127.0.0.1', '-n', '2'], { timeout: 100 });
       }).toThrow();
     });
 
     test('iterator receives errors as lines', () => {
-      const proc = xs('nonexistentforsure');
+      const proc = xSync('nonexistentforsure');
       const lines: string[] = [];
       for (const line of proc) {
         lines.push(line);
@@ -240,21 +242,20 @@ if (!isWindows) {
   describe('exec (unix-like) (sync)', () => {
     test('times out after defined timeout (ms)', () => {
       expect(() => {
-        xs('sleep', ['0.2'], { timeout: 100 });
+        xSync('sleep', ['0.2'], { timeout: 100 });
       }).toThrow();
     });
 
     test('throws spawn errors', () => {
       expect(() => {
-        xs('definitelyNonExistent');
+        xSync('definitelyNonExistent');
       }).toThrow('spawnSync definitelyNonExistent ENOENT');
     });
 
     test('iterator receives errors', () => {
       expect(() => {
-        xs('nonexistentforsure');
+        xSync('nonexistentforsure');
       }).toThrow();
     });
   });
 }
-

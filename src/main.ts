@@ -364,7 +364,7 @@ const defaultSyncOptions: Partial<SyncOptions> = {
   timeout: undefined
 };
 
-export function xs(
+export function xSync(
   command: string,
   args?: string[],
   options?: Partial<SyncOptions>
@@ -438,3 +438,4 @@ export const x: TinyExec = (command, args, userOptions) => {
 };
 
 export const exec = x;
+export const execSync = xSync;
