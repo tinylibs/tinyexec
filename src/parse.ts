@@ -1,0 +1,149 @@
+import {type SpawnOptions} from 'node:child_process';
+import {closeSync, openSync, readSync, statSync} from 'node:fs';
+import {delimiter, normalize, resolve, sep} from 'node:path';
+
+const isExecutableRegExp = /\.(?:com|exe)$/i;
+const isCmdShimRegExp = /node_modules[\\/]\.bin[\\/][^\\/]+\.cmd$/i;
+// From https://github.com/sindresorhus/shebang-regex (MIT)
+const shebangRegex = /^#!(.*)/;
+// See http://www.robvanderwoude.com/escapechars.php
+const metaCharsRegExp = /([()\][%!^"`<>&|;, *?])/g;
+
+export interface CrossParseResult {
+  command: string;
+  args: string[];
+  options: SpawnOptions
+}
+
+// From https://github.com/moxystudio/node-cross-spawn (MIT)
+export function parse(command: string, args: string[] = [], options: SpawnOptions = {}): CrossParseResult {
+	// Build our parsed object
+	const parsed: CrossParseResult = {
+		command,
+		args: [...args],
+		options: { ...options },
+	};
+
+	// Early return if use `shell` option or not on Windows.
+	if (parsed.options.shell === true || process.platform !== 'win32') {
+		return parsed;
+	}
+
+	parsed.options.env ??= process.env;
+	parsed.options.cwd ??= process.cwd();
+
+  // Detect & add support for shebangs
+	let file = resolveCommand(parsed.command, parsed.options);
+	let shebang: string | null = null;
+
+	if (file !== null) {
+		// Read the first 150 bytes from the file
+		const size = 150;
+		const buffer = Buffer.alloc(size);
+
+		try {
+			const fd = openSync(file, 'r');
+			readSync(fd, buffer, 0, size, 0);
+			closeSync(fd);
+		} catch {}
+
+		// From https://github.com/kevva/shebang-command (MIT)
+		const match = buffer.toString().match(shebangRegex);
+
+		if (match !== null) {
+			const [path, argument] = match[0].replace(/#! ?/, '').split(' ');
+			const binary = path.split('/').pop();
+
+			shebang = binary === 'env' ? argument : binary;
+		}
+	}
+
+	if (shebang !== null) {
+		parsed.args.unshift(file);
+		parsed.command = shebang;
+
+		file = resolveCommand(parsed.command, parsed.options);
+	}
+
+	// We don't need a shell if the command filename is an executable
+  if (!isExecutableRegExp.test(file)) {
+		// Need to double escape meta chars if the command is a cmd-shim located in `node_modules/.bin/`
+		// The cmd-shim simply calls execute the package bin file with NodeJS, proxying any argument
+		// Because the escape of metachars with ^ gets interpreted when the cmd.exe is first called,
+		// we need to double escape them
+		const needsDoubleEscapeMetaChars = isCmdShimRegExp.test(file);
+
+		// Normalize posix paths into OS compatible paths (e.g.: foo/bar -> foo\bar)
+		// This is necessary otherwise it will always fail with ENOENT in those cases
+		parsed.command = normalize(parsed.command);
+
+		// Escape command & arguments
+		parsed.command = parsed.command.replace(metaCharsRegExp, '^$1');
+		parsed.args = parsed.args.map((arg) => {
+			// Algorithm below is based on https://qntm.org/cmd
+			// It's slightly altered to disable JS backtracking to avoid hanging on specially crafted input
+			// Please see https://github.com/moxystudio/node-cross-spawn/pull/160 for more information
+
+			// Sequence of backslashes followed by a double quote:
+			// double up all the backslashes and escape the double quote
+			arg = arg.replace(/(?=(\\+?)?)\1"/g, '$1$1\\"');
+
+			// Sequence of backslashes followed by the end of the string
+			// (which will become a double quote later):
+			// double up all the backslashes
+			arg = arg.replace(/(?=(\\+?)?)\1$/, '$1$1');
+
+			// All other backslashes occur literally
+
+			// Quote the whole thing:
+			arg = `"${arg}"`;
+
+			// Escape meta chars
+			arg = arg.replace(metaCharsRegExp, '^$1');
+
+			// Double escape meta chars if necessary
+			if (needsDoubleEscapeMetaChars) {
+				arg = arg.replace(metaCharsRegExp, '^$1');
+			}
+
+			return arg;
+		});
+
+		parsed.args = ['/d', '/s', '/c', `"${[parsed.command, ...parsed.args].join(' ')}"`];
+		parsed.command = parsed.options.env.comspec ?? 'cmd.exe';
+		parsed.options.windowsVerbatimArguments = true; // Tell node's spawn that the arguments are already escaped
+	}
+
+	return parsed;
+};
+
+// From https://github.com/npm/node-which (ISC), Windows part only.
+function resolveCommand(command: string, options: SpawnOptions): string | null {
+	const { cwd, env } = options;
+
+	const PATH = env.Path ?? env.PATH;
+	const PATHEXT = env.PATHEXT ?? '.EXE;.CMD;.BAT;.COM';
+
+	const pathEnv = command.includes(sep) ? [''] : [cwd, ...PATH.split(delimiter)];
+	const pathExt = PATHEXT.split(delimiter);
+
+	if (command.includes('.') && pathExt[0] !== '') {
+		pathExt.unshift('');
+	}
+
+	for (const pe of pathEnv) {
+		const dest = resolve(pe, command);
+
+		for (const ext of pathExt) {
+			const destWithExt = dest + ext;
+
+			try {
+				if (statSync(destWithExt).isFile()) {
+					return resolve(cwd, destWithExt);
+				}
+			} catch {}
+		}
+	}
+
+	return null;
+};
