@@ -188,7 +188,7 @@ if (!isWindows) {
       const proc = x('sleep', ['0.2'], {timeout: 100});
       await expect(async () => {
         await proc;
-      }).rejects.toThrow();
+      }).rejects.toThrow('The operation was aborted');
       expect(proc.killed).toBe(true);
       expect(proc.process!.signalCode).toBe('SIGTERM');
     });
@@ -245,7 +245,7 @@ if (!isWindows) {
     test('times out after defined timeout (ms)', () => {
       expect(() => {
         xSync('sleep', ['0.2'], {timeout: 100});
-      }).toThrow();
+      }).toThrow('spawnSync sleep ETIMEDOUT');
     });
 
     test('throws spawn errors', () => {

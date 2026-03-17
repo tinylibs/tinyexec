@@ -1,9 +1,4 @@
-import type {Output} from './main.js';
-
-interface ExitCodeable {
-  readonly exitCode: number | null | undefined;
-  readonly pid: number | undefined | null;
-}
+import type {Output, CommonOutputApi} from './main.js';
 
 export class NonZeroExitError extends Error {
   public get exitCode(): number | undefined {
@@ -14,7 +9,7 @@ export class NonZeroExitError extends Error {
   }
 
   public constructor(
-    public readonly result: ExitCodeable,
+    public readonly result: CommonOutputApi,
     public readonly output?: Output
   ) {
     super(`Process exited with non-zero status (${result.exitCode})`);

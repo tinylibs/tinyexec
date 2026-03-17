@@ -16,6 +16,8 @@ import {NonZeroExitError} from './non-zero-exit-error.js';
 
 export {NonZeroExitError};
 
+const LINE_SEPARATOR_REGEX = /\r?\n/;
+
 export interface Output {
   stderr: string;
   stdout: string;
@@ -27,31 +29,44 @@ export interface PipeOptions extends Options {}
 
 export type KillSignal = Parameters<ChildProcess['kill']>[0];
 
-export interface OutputApi extends AsyncIterable<string> {
+export interface CommonOutputApi {
+  get pid(): number | undefined;
+  get killed(): boolean;
+  get exitCode(): number | undefined;
+}
+
+export interface OutputApi extends AsyncIterable<string>, CommonOutputApi {
+  process: ChildProcess | undefined;
+  get aborted(): boolean;
+
   pipe(
     command: string,
     args?: string[],
     options?: Partial<PipeOptions>
   ): Result;
-  process: ChildProcess | undefined;
   kill(signal?: KillSignal): boolean;
-
-  // Getters
-  get pid(): number | undefined;
-  get aborted(): boolean;
-  get killed(): boolean;
-  get exitCode(): number | undefined;
 }
+
+export interface OutputApiSync extends Iterable<string>, CommonOutputApi {}
 
 export type Result = PromiseLike<Output> & OutputApi;
 
-export interface Options {
+export type SyncResult = Output & OutputApiSync;
+
+export interface CommonOptions {
+  timeout: number;
+  throwOnError: boolean;
+}
+
+export interface Options extends CommonOptions {
   signal: AbortSignal;
   nodeOptions: SpawnOptions;
-  timeout: number;
   persist: boolean;
   stdin: ExecProcess;
-  throwOnError: boolean;
+}
+
+export interface SyncOptions extends CommonOptions {
+  nodeOptions: SpawnSyncOptions;
 }
 
 export interface TinyExec {
@@ -61,6 +76,10 @@ export interface TinyExec {
 const defaultOptions: Partial<Options> = {
   timeout: undefined,
   persist: false
+};
+
+const defaultSyncOptions: Partial<SyncOptions> = {
+  timeout: undefined
 };
 
 const defaultNodeOptions: SpawnOptions = {
@@ -354,22 +373,6 @@ export class ExecProcess implements Result {
   };
 }
 
-export interface SyncOptions {
-  nodeOptions: SpawnSyncOptions;
-  timeout: number;
-  throwOnError: boolean;
-}
-
-export interface SyncResult extends Output {
-  pid: number | undefined;
-  killed: boolean;
-  [Symbol.iterator](): Iterator<string>;
-}
-
-const defaultSyncOptions: Partial<SyncOptions> = {
-  timeout: undefined
-};
-
 export function xSync(
   command: string,
   args?: string[],
@@ -382,20 +385,16 @@ export function xSync(
     ...opts.nodeOptions
   };
 
-  nodeOptions.env = computeEnv(cwd, nodeOptions.env);
-
   if (opts.timeout !== undefined) {
     nodeOptions.timeout = opts.timeout;
   }
 
+  nodeOptions.env = computeEnv(cwd, nodeOptions.env);
+
   const {command: normalisedCommand, args: normalisedArgs} =
     normaliseCommandAndArgs(command, args);
 
-  const crossResult = _parse(
-    normalisedCommand,
-    normalisedArgs,
-    nodeOptions as SpawnOptions
-  );
+  const crossResult = _parse(normalisedCommand, normalisedArgs, nodeOptions);
 
   const spawnResult = spawnSync(
     crossResult.command,
@@ -415,13 +414,19 @@ export function xSync(
   const result: SyncResult = {
     stdout,
     stderr,
-    exitCode,
-    pid: spawnResult.pid,
-    killed,
+    get exitCode() {
+      return exitCode;
+    },
+    get pid() {
+      return spawnResult.pid;
+    },
+    get killed() {
+      return killed;
+    },
     *[Symbol.iterator]() {
       for (const text of [stdout, stderr]) {
         if (!text) continue;
-        const lines = text.split(/\r?\n/);
+        const lines = text.split(LINE_SEPARATOR_REGEX);
         if (lines[lines.length - 1] === '') lines.pop();
         yield* lines;
       }
