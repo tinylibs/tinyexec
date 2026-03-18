@@ -29,7 +29,7 @@ export function parse(command: string, args: string[] = [], options: SpawnOption
 	parsed.options.cwd ??= process.cwd();
 
   // Detect & add support for shebangs
-	let file = resolveCommand(parsed.command, parsed.options);
+	let file = resolveCommand(parsed);
 	let shebang: string | null = null;
 
 	if (file !== null) {
@@ -58,7 +58,7 @@ export function parse(command: string, args: string[] = [], options: SpawnOption
 		parsed.args.unshift(file);
 		parsed.command = shebang;
 
-		file = resolveCommand(parsed.command, parsed.options);
+		file = resolveCommand(parsed);
 	}
 
 	// We don't need a shell if the command filename is an executable
@@ -114,7 +114,8 @@ export function parse(command: string, args: string[] = [], options: SpawnOption
 };
 
 // From https://github.com/npm/node-which (ISC), Windows part only and sync version.
-function resolveCommand(command: string, options: SpawnOptions): string | null {
+function resolveCommand(parsed: CrossParseResult): string | null {
+	const { command, options } = parsed;
 	const PATH = options.env.Path ?? options.env.PATH;
 	const PATHEXT = options.env.PATHEXT ?? '.EXE;.CMD;.BAT;.COM';
 
