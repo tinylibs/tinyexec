@@ -1,6 +1,6 @@
 import {type SpawnOptions} from 'node:child_process';
 import {closeSync, openSync, readSync, statSync} from 'node:fs';
-import {delimiter, normalize, resolve, sep} from 'node:path';
+import {delimiter as pathDelimiter, normalize as normalizePath, resolve as resolvePath, sep as pathSeparator} from 'node:path';
 
 // See http://www.robvanderwoude.com/escapechars.php
 const metaCharsRegExp = /([()\][%!^"`<>&|;, *?])/g;
@@ -71,7 +71,7 @@ export function parse(command: string, args: string[] = [], options: SpawnOption
 
 		// Normalize posix paths into OS compatible paths (e.g.: foo/bar -> foo\bar)
 		// This is necessary otherwise it will always fail with ENOENT in those cases
-		parsed.command = normalize(parsed.command);
+		parsed.command = normalizePath(parsed.command);
 
 		// Escape command & arguments
 		parsed.command = parsed.command.replace(metaCharsRegExp, '^$1');
@@ -118,22 +118,22 @@ function resolveCommand(command: string, options: SpawnOptions): string | null {
 	const PATH = options.env.Path ?? options.env.PATH;
 	const PATHEXT = options.env.PATHEXT ?? '.EXE;.CMD;.BAT;.COM';
 
-	const pathEnv = command.includes(sep) ? [''] : [options.cwd, ...PATH.split(delimiter)];
-	const pathExt = PATHEXT.split(delimiter);
+	const pathEnv = command.includes(pathSeparator) ? [''] : [options.cwd, ...PATH.split(pathDelimiter)];
+	const pathExt = PATHEXT.split(pathDelimiter);
 
 	if (command.includes('.') && pathExt[0] !== '') {
 		pathExt.unshift('');
 	}
 
 	for (const path of pathEnv) {
-		const dest = resolve(path, command);
+		const dest = resolvePath(path, command);
 
 		for (const ext of pathExt) {
 			const destWithExt = dest + ext;
 
 			try {
 				if (statSync(destWithExt).isFile()) {
-					return resolve(cwd, destWithExt);
+					return resolvePath(cwd, destWithExt);
 				}
 			} catch {}
 		}
