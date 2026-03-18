@@ -113,7 +113,7 @@ export function parse(command: string, args: string[] = [], options: SpawnOption
 	return parsed;
 };
 
-// From https://github.com/npm/node-which (ISC), Windows part only.
+// From https://github.com/npm/node-which (ISC), Windows part only and sync version.
 function resolveCommand(command: string, options: SpawnOptions): string | null {
 	const PATH = options.env.Path ?? options.env.PATH;
 	const PATHEXT = options.env.PATHEXT ?? '.EXE;.CMD;.BAT;.COM';
