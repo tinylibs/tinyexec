@@ -115,20 +115,18 @@ export function parse(command: string, args: string[] = [], options: SpawnOption
 
 // From https://github.com/npm/node-which (ISC), Windows part only.
 function resolveCommand(command: string, options: SpawnOptions): string | null {
-	const { cwd, env } = options;
+	const PATH = options.env.Path ?? options.env.PATH;
+	const PATHEXT = options.env.PATHEXT ?? '.EXE;.CMD;.BAT;.COM';
 
-	const PATH = env.Path ?? env.PATH;
-	const PATHEXT = env.PATHEXT ?? '.EXE;.CMD;.BAT;.COM';
-
-	const pathEnv = command.includes(sep) ? [''] : [cwd, ...PATH.split(delimiter)];
+	const pathEnv = command.includes(sep) ? [''] : [options.cwd, ...PATH.split(delimiter)];
 	const pathExt = PATHEXT.split(delimiter);
 
 	if (command.includes('.') && pathExt[0] !== '') {
 		pathExt.unshift('');
 	}
 
-	for (const pe of pathEnv) {
-		const dest = resolve(pe, command);
+	for (const path of pathEnv) {
+		const dest = resolve(path, command);
 
 		for (const ext of pathExt) {
 			const destWithExt = dest + ext;
