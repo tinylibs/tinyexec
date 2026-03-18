@@ -2,10 +2,6 @@ import {type SpawnOptions} from 'node:child_process';
 import {closeSync, openSync, readSync, statSync} from 'node:fs';
 import {delimiter, normalize, resolve, sep} from 'node:path';
 
-const isExecutableRegExp = /\.(?:com|exe)$/i;
-const isCmdShimRegExp = /node_modules[\\/]\.bin[\\/][^\\/]+\.cmd$/i;
-// From https://github.com/sindresorhus/shebang-regex (MIT)
-const shebangRegex = /^#!(.*)/;
 // See http://www.robvanderwoude.com/escapechars.php
 const metaCharsRegExp = /([()\][%!^"`<>&|;, *?])/g;
 
@@ -48,7 +44,7 @@ export function parse(command: string, args: string[] = [], options: SpawnOption
 		} catch {}
 
 		// From https://github.com/kevva/shebang-command (MIT)
-		const match = buffer.toString().match(shebangRegex);
+		const match = buffer.toString().match(/^#!(.*)/);
 
 		if (match !== null) {
 			const [path, argument] = match[0].replace(/#! ?/, '').split(' ');
@@ -66,12 +62,12 @@ export function parse(command: string, args: string[] = [], options: SpawnOption
 	}
 
 	// We don't need a shell if the command filename is an executable
-  if (!isExecutableRegExp.test(file)) {
+  if (!/\.(?:com|exe)$/i.test(file)) {
 		// Need to double escape meta chars if the command is a cmd-shim located in `node_modules/.bin/`
 		// The cmd-shim simply calls execute the package bin file with NodeJS, proxying any argument
 		// Because the escape of metachars with ^ gets interpreted when the cmd.exe is first called,
 		// we need to double escape them
-		const needsDoubleEscapeMetaChars = isCmdShimRegExp.test(file);
+		const needsDoubleEscapeMetaChars = /node_modules[\\/]\.bin[\\/][^\\/]+\.cmd$/i.test(file);
 
 		// Normalize posix paths into OS compatible paths (e.g.: foo/bar -> foo\bar)
 		// This is necessary otherwise it will always fail with ENOENT in those cases
