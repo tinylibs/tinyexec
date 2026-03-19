@@ -144,7 +144,7 @@ function resolveCommand(parsed: CrossParseResult): string | null {
   }
 
   for (const path of pathEnv) {
-    const dest = resolvePath(path, command);
+    const dest = resolvePath(path.replace(/^"(.*)"$/, "$1"), command);
 
     for (const ext of pathExt) {
       const destWithExt = dest + ext;
