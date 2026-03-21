@@ -25,7 +25,7 @@ const result = await x('ls', ['-l']);
 // result.exitCode - the process exit code as a number
 ```
 
-By default, tinyexec does not throw on non‑zero exit codes. Check `result.exitCode` or pass `{throwOnError: true}`. 
+By default, tinyexec does not throw on non‑zero exit codes. Check `result.exitCode` or pass `{throwOnError: true}`.
 
 Output is returned exactly as produced; trailing newlines are not trimmed. If you need trimming, do it explicitly:
 
@@ -148,6 +148,40 @@ const result = await x(command, args);
 
 result.stdout; // Hello, World!
 ```
+
+### Synchronous
+
+You can use `xSync` for synchronous (blocking) execution:
+
+```ts
+import {xSync} from 'tinyexec';
+
+const result = xSync('ls', ['-l']);
+
+// result.stdout - the stdout as a string
+// result.stderr - the stderr as a string
+// result.exitCode - the process exit code as a number
+```
+
+Like the async API, you can iterate over lines:
+
+```ts
+const result = xSync('ls', ['-l']);
+
+for (const line of result) {
+  // line will be from stdout then stderr
+}
+```
+
+Since the synchronous API blocks the event loop, there are some features that are supported in the async API that the sync API does not support:
+
+- `signal`
+- `persist`
+- `kill()` method
+- `stdin` piping
+- `pipe()` method
+
+Other options like `timeout`, `throwOnError`, and `nodeOptions` work the same way.
 
 ## API
 
