@@ -1,10 +1,15 @@
-import {x, NonZeroExitError} from '../main.js';
+import {x, xSync, NonZeroExitError} from '../main.js';
 import {describe, test, expect} from 'vitest';
 import os from 'node:os';
 
 const isWindows = os.platform() === 'win32';
 
-describe('exec', async () => {
+const variants = [
+  {name: 'async', x, isAsync: true},
+  {name: 'sync', x: xSync, isAsync: false}
+];
+
+describe.each(variants)('exec ($name)', ({x, isAsync}) => {
   test('pid is number', async () => {
     const proc = x('echo', ['foo']);
     await proc;
@@ -13,18 +18,16 @@ describe('exec', async () => {
 
   test('exitCode is set correctly', async () => {
     const proc = x('echo', ['foo']);
-    expect(proc.exitCode).toBe(undefined);
+
+    // only async API will have its exitCode undefined before awaiting;
+    // for sync API the process has already exited by the time we reach here
+    if (isAsync) {
+      expect(proc.exitCode).toBe(undefined);
+    }
+
     const result = await proc;
     expect(proc.exitCode).toBe(0);
     expect(result.exitCode).toBe(0);
-  });
-
-  test('non-zero exitCode throws when throwOnError=true', async () => {
-    const proc = x('node', ['-e', 'process.exit(1);'], {throwOnError: true});
-    await expect(async () => {
-      await proc;
-    }).rejects.toThrow(NonZeroExitError);
-    expect(proc.exitCode).toBe(1);
   });
 
   test('async iterator gets correct output', async () => {
@@ -50,8 +53,37 @@ describe('exec', async () => {
   });
 });
 
+describe('exec (async)', () => {
+  test('non-zero exitCode throws when throwOnError=true', async () => {
+    const proc = x('node', ['-e', 'process.exit(1);'], {throwOnError: true});
+    await expect(async () => {
+      await proc;
+    }).rejects.toThrow(NonZeroExitError);
+    expect(proc.exitCode).toBe(1);
+  });
+});
+
+describe('exec (sync)', () => {
+  test('non-zero exitCode throws when throwOnError=true', () => {
+    expect(() => {
+      xSync('node', ['-e', 'process.exit(1);'], {throwOnError: true});
+    }).toThrow(NonZeroExitError);
+  });
+});
+
 if (isWindows) {
-  describe('exec (windows)', async () => {
+  describe.each(variants)('exec (windows) ($name)', ({x}) => {
+    test('does not throw spawn errors', async () => {
+      const result = await x('definitelyNonExistent');
+      expect(result.stderr).toBe(
+        "'definitelyNonExistent' is not recognized as an internal" +
+          ' or external command,\r\noperable program or batch file.\r\n'
+      );
+      expect(result.stdout).toBe('');
+    });
+  });
+
+  describe('exec (windows) (async)', () => {
     test('times out after defined timeout (ms)', async () => {
       // Somewhat filthy way of waiting for 2 seconds across cmd/ps
       const proc = x('ping', ['127.0.0.1', '-n', '2'], {timeout: 100});
@@ -60,15 +92,6 @@ if (isWindows) {
       }).rejects.toThrow();
       expect(proc.killed).toBe(true);
       expect(proc.process!.signalCode).toBe('SIGTERM');
-    });
-
-    test('does not throw spawn errors', async () => {
-      const result = await x('definitelyNonExistent');
-      expect(result.stderr).toBe(
-        "'definitelyNonExistent' is not recognized as an internal" +
-          ' or external command,\r\noperable program or batch file.\r\n'
-      );
-      expect(result.stdout).toBe('');
     });
 
     test('throws spawn errors when throwOnError=true', async () => {
@@ -121,7 +144,7 @@ if (isWindows) {
       expect(result.stdout).toBe('');
     });
 
-    test('async iterator receives errors as lines', async () => {
+    test('iterator receives errors as lines', async () => {
       const proc = x('nonexistentforsure');
       const lines: string[] = [];
       for await (const line of proc) {
@@ -135,15 +158,37 @@ if (isWindows) {
       ]);
     });
   });
+
+  describe('exec (windows) (sync)', () => {
+    test('times out after defined timeout (ms)', () => {
+      expect(() => {
+        xSync('ping', ['127.0.0.1', '-n', '2'], {timeout: 100});
+      }).toThrow();
+    });
+
+    test('iterator receives errors as lines', () => {
+      const proc = xSync('nonexistentforsure');
+      const lines: string[] = [];
+      for (const line of proc) {
+        lines.push(line);
+      }
+
+      expect(lines).toEqual([
+        "'nonexistentforsure' is not recognized as an internal or " +
+          'external command,',
+        'operable program or batch file.'
+      ]);
+    });
+  });
 }
 
 if (!isWindows) {
-  describe('exec (unix-like)', async () => {
+  describe('exec (unix-like) (async)', () => {
     test('times out after defined timeout (ms)', async () => {
       const proc = x('sleep', ['0.2'], {timeout: 100});
       await expect(async () => {
         await proc;
-      }).rejects.toThrow();
+      }).rejects.toThrow('The operation was aborted');
       expect(proc.killed).toBe(true);
       expect(proc.process!.signalCode).toBe('SIGTERM');
     });
@@ -186,13 +231,33 @@ if (!isWindows) {
       expect(result.stdout).toBe('');
     });
 
-    test('async iterator receives errors', async () => {
+    test('iterator receives errors', async () => {
       const proc = x('nonexistentforsure');
       await expect(async () => {
         for await (const line of proc) {
           line;
         }
       }).rejects.toThrow();
+    });
+  });
+
+  describe('exec (unix-like) (sync)', () => {
+    test('times out after defined timeout (ms)', () => {
+      expect(() => {
+        xSync('sleep', ['0.2'], {timeout: 100});
+      }).toThrow('spawnSync sleep ETIMEDOUT');
+    });
+
+    test('throws spawn errors', () => {
+      expect(() => {
+        xSync('definitelyNonExistent');
+      }).toThrow('spawnSync definitelyNonExistent ENOENT');
+    });
+
+    test('iterator receives errors', () => {
+      expect(() => {
+        xSync('nonexistentforsure');
+      }).toThrow();
     });
   });
 }
