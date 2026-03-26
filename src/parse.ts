@@ -50,7 +50,7 @@ export function parse(
       const fd = openSync(file, 'r');
       readSync(fd, buffer, 0, size, 0);
       closeSync(fd);
-    } catch {}
+    } catch {} // eslint-disable-line no-empty
 
     // From https://github.com/kevva/shebang-command (MIT)
     const match = buffer.toString().match(/^#!(.*)/);
@@ -144,7 +144,7 @@ function resolveCommand(parsed: CrossParseResult): string | null {
   }
 
   for (const path of pathEnv) {
-    const dest = resolvePath(path.replace(/^"(.*)"$/, "$1"), command);
+    const dest = resolvePath(path.replace(/^"(.*)"$/, '$1'), command);
 
     for (const ext of pathExt) {
       const destWithExt = dest + ext;
@@ -153,7 +153,7 @@ function resolveCommand(parsed: CrossParseResult): string | null {
         if (statSync(destWithExt).isFile()) {
           return resolvePath(cwd, destWithExt);
         }
-      } catch {}
+      } catch {} // eslint-disable-line no-empty
     }
   }
 
