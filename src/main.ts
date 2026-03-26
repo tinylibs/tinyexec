@@ -124,9 +124,15 @@ function combineSignals(signals: Iterable<AbortSignal>): AbortSignal {
 
 async function readStream(stream: Readable): Promise<string> {
   let output = '';
-  for await (const chunk of stream) {
-    output += chunk.toString();
+
+  try {
+    for await (const chunk of stream) {
+      output += chunk.toString();
+    }
+  } catch {
+    // suppress errors, child process probably failed to spawn
   }
+
   return output;
 }
 

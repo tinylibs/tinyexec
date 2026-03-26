@@ -21,7 +21,7 @@ export const combineStreams = (streams: Readable[]): Readable => {
 
   for (const stream of streams) {
     stream.pipe(combined, {end: false});
-    stream.on('end', maybeEmitEnd);
+    stream.on('close', maybeEmitEnd);
   }
 
   return combined;
