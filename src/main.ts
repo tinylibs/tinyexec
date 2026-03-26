@@ -11,7 +11,7 @@ import {cwd as getCwd} from 'node:process';
 import {computeEnv} from './env.js';
 import {combineStreams} from './stream.js';
 import readline from 'node:readline';
-import {_parse} from 'cross-spawn';
+import {parse} from './parse.js';
 import {NonZeroExitError} from './non-zero-exit-error.js';
 
 export {NonZeroExitError};
@@ -320,7 +320,7 @@ export class ExecProcess implements Result {
     const {command: normalisedCommand, args: normalisedArgs} =
       normaliseCommandAndArgs(this._command, this._args);
 
-    const crossResult = _parse(normalisedCommand, normalisedArgs, nodeOptions);
+    const crossResult = parse(normalisedCommand, normalisedArgs, nodeOptions);
 
     const handle = spawn(
       crossResult.command,
@@ -394,7 +394,7 @@ export function xSync(
   const {command: normalisedCommand, args: normalisedArgs} =
     normaliseCommandAndArgs(command, args);
 
-  const crossResult = _parse(normalisedCommand, normalisedArgs, nodeOptions);
+  const crossResult = parse(normalisedCommand, normalisedArgs, nodeOptions);
 
   const spawnResult = spawnSync(
     crossResult.command,

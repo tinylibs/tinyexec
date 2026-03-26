@@ -10,7 +10,7 @@ import {
 // See http://www.robvanderwoude.com/escapechars.php
 const metaCharsRegExp = /([()\][%!^"`<>&|;, *?])/g;
 
-export interface CrossParseResult {
+interface CrossParseResult {
   command: string;
   args: string[];
   options: SpawnOptions;
@@ -58,11 +58,11 @@ export function parse(
       const [path, argument] = match[0].replace(/#! ?/, '').split(' ');
       const binary = path.split('/').pop();
 
-      shebang = binary === 'env' ? argument : binary;
+      shebang = (binary === 'env' ? argument : binary) as string;
     }
   }
 
-  if (shebang !== null) {
+  if (shebang !== null && file !== null) {
     parsed.args.unshift(file);
     parsed.command = shebang;
 
@@ -70,7 +70,7 @@ export function parse(
   }
 
   // We don't need a shell if the command filename is an executable
-  if (!/\.(?:com|exe)$/i.test(file)) {
+  if (file !== null && !/\.(?:com|exe)$/i.test(file)) {
     // Need to double escape meta chars if the command is a cmd-shim located in `node_modules/.bin/`
     // The cmd-shim simply calls execute the package bin file with NodeJS, proxying any argument
     // Because the escape of metachars with ^ gets interpreted when the cmd.exe is first called,
@@ -120,7 +120,7 @@ export function parse(
       '/c',
       `"${[parsed.command, ...parsed.args].join(' ')}"`
     ];
-    parsed.command = parsed.options.env.comspec ?? 'cmd.exe';
+    parsed.command = parsed.options.env?.comspec ?? 'cmd.exe';
     parsed.options.windowsVerbatimArguments = true; // Tell node's spawn that the arguments are already escaped
   }
 
@@ -129,13 +129,17 @@ export function parse(
 
 // From https://github.com/npm/node-which (ISC), Windows part only and sync version.
 function resolveCommand(parsed: CrossParseResult): string | null {
-  const {command, options} = parsed;
-  const PATH = options.env.Path ?? options.env.PATH;
+  const {command, options} = parsed as {
+    command: string;
+    options: Required<SpawnOptions>;
+  };
+  const cwd = options.cwd.toString() as string;
+  const PATH = (options.env.Path ?? options.env.PATH) as string;
   const PATHEXT = options.env.PATHEXT ?? '.EXE;.CMD;.BAT;.COM';
 
   const pathEnv = command.includes(pathSeparator)
     ? ['']
-    : [options.cwd, ...PATH.split(pathDelimiter)];
+    : [cwd, ...PATH.split(pathDelimiter)];
   const pathExt = PATHEXT.split(pathDelimiter);
 
   if (command.includes('.') && pathExt[0] !== '') {
@@ -150,7 +154,7 @@ function resolveCommand(parsed: CrossParseResult): string | null {
 
       try {
         if (statSync(destWithExt).isFile()) {
-          return resolvePath(options.cwd, destWithExt);
+          return resolvePath(cwd, destWithExt);
         }
       } catch {} // eslint-disable-line no-empty
     }
