@@ -34,7 +34,6 @@ export function parse(
     return parsed;
   }
 
-  parsed.options.env ??= process.env;
   parsed.options.cwd ??= process.cwd();
 
   // Detect & add support for shebangs
@@ -151,7 +150,7 @@ function resolveCommand(parsed: CrossParseResult): string | null {
 
       try {
         if (statSync(destWithExt).isFile()) {
-          return resolvePath(cwd, destWithExt);
+          return resolvePath(options.cwd, destWithExt);
         }
       } catch {} // eslint-disable-line no-empty
     }
