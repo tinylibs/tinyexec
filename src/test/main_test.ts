@@ -197,7 +197,11 @@ if (!isWindows) {
       const proc = x('definitelyNonExistent');
       await expect(async () => {
         await proc;
-      }).rejects.toThrow('spawn definitelyNonExistent ENOENT');
+      }).rejects.toThrow(
+        process.versions.bun
+          ? 'Executable not found in $PATH: "definitelyNonExistent"'
+          : 'spawn definitelyNonExistent ENOENT'
+      );
     });
 
     test('kill terminates the process', async () => {
@@ -251,7 +255,11 @@ if (!isWindows) {
     test('throws spawn errors', () => {
       expect(() => {
         xSync('definitelyNonExistent');
-      }).toThrow('spawnSync definitelyNonExistent ENOENT');
+      }).toThrow(
+        process.versions.bun
+          ? 'Executable not found in $PATH: "definitelyNonExistent"'
+          : 'spawnSync definitelyNonExistent ENOENT'
+      );
     });
 
     test('iterator receives errors', () => {
