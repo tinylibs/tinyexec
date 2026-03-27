@@ -6,6 +6,8 @@ import {
   resolve as resolvePath,
   sep as pathSeparator
 } from 'node:path';
+import {cwd as getCwd} from 'node:process';
+import {type EnvLike} from './env.js';
 
 // See http://www.robvanderwoude.com/escapechars.php
 const metaCharsRegExp = /([()\][%!^"`<>&|;, *?])/g;
@@ -33,8 +35,6 @@ export function parse(
   if (parsed.options.shell === true || process.platform !== 'win32') {
     return parsed;
   }
-
-  parsed.options.cwd ??= process.cwd();
 
   // Detect & add support for shebangs
   let file = resolveCommand(parsed);
@@ -129,13 +129,12 @@ export function parse(
 
 // From https://github.com/npm/node-which (ISC), Windows part only and sync version.
 function resolveCommand(parsed: CrossParseResult): string | null {
-  const {command, options} = parsed as {
-    command: string;
-    options: Required<SpawnOptions>;
-  };
-  const cwd = options.cwd.toString() as string;
-  const PATH = (options.env.Path ?? options.env.PATH) as string;
-  const PATHEXT = options.env.PATHEXT ?? '.EXE;.CMD;.BAT;.COM';
+  const {command, options} = parsed;
+  const cwd = (options.cwd ?? getCwd()).toString() as string;
+  const env = options.env as EnvLike;
+
+  const PATH = (env.Path ?? env.PATH) as string;
+  const PATHEXT = env.PATHEXT ?? '.EXE;.CMD;.BAT;.COM';
 
   const pathEnv = command.includes(pathSeparator)
     ? ['']
