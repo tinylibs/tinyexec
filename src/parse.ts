@@ -75,8 +75,8 @@ export function parse(
     // The cmd-shim simply calls execute the package bin file with NodeJS, proxying any argument
     // Because the escape of metachars with ^ gets interpreted when the cmd.exe is first called,
     // we need to double escape them
-    const needsDoubleEscapeMetaChars = file !== null &&
-      /node_modules[\\/]\.bin[\\/][^\\/]+\.cmd$/i.test(file);
+    const needsDoubleEscapeMetaChars =
+      file !== null && /node_modules[\\/]\.bin[\\/][^\\/]+\.cmd$/i.test(file);
 
     // Normalize posix paths into OS compatible paths (e.g.: foo/bar -> foo\bar)
     // This is necessary otherwise it will always fail with ENOENT in those cases
