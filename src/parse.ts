@@ -11,6 +11,7 @@ import {type EnvLike} from './env.js';
 
 // See http://www.robvanderwoude.com/escapechars.php
 const metaCharsRegExp = /([()\][%!^"`<>&|;, *?])/g;
+const shebangRegExp = /^#!\s*(.+)$/;
 
 interface CrossParseResult {
   command: string;
@@ -49,16 +50,25 @@ export function parse(
       const fd = openSync(file, 'r');
       readSync(fd, buffer, 0, size, 0);
       closeSync(fd);
-    } catch {} // eslint-disable-line no-empty
+    } catch {
+      // do nothing, we'll just assume it's not a shebang
+    }
 
-    // From https://github.com/kevva/shebang-command (MIT)
-    const match = buffer.toString().match(/^#!(.*)/);
+    const match = buffer.toString().match(shebangRegExp);
 
     if (match !== null) {
-      const [path, argument] = match[0].replace(/#! ?/, '').split(' ');
-      const binary = path.split('/').pop();
+      const separatorIndex = match[1].indexOf(' ');
+      if (separatorIndex !== -1) {
+        const path = match[1].slice(0, separatorIndex);
+        const argument = match[1].slice(separatorIndex + 1);
+        const binarySeparatorIndex = path.lastIndexOf('/');
+        const binary =
+          binarySeparatorIndex !== -1
+            ? path.slice(binarySeparatorIndex + 1)
+            : path;
 
-      shebang = (binary === 'env' ? argument : binary) as string;
+        shebang = binary === 'env' ? argument : binary;
+      }
     }
   }
 
