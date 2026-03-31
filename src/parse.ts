@@ -79,7 +79,7 @@ export function parse(
     file = resolveCommand(parsed);
   }
 
-  // We don't need a shell if the command filename is an executable or not resolved
+  // We don't need a shell if the command filename is resolved and an executable
   if (file === null || !/\.(?:com|exe)$/i.test(file)) {
     // Need to double escape meta chars if the command is a cmd-shim located in `node_modules/.bin/`
     // The cmd-shim simply calls execute the package bin file with NodeJS, proxying any argument
