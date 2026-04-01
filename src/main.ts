@@ -62,7 +62,7 @@ export interface Options extends CommonOptions {
   signal: AbortSignal;
   nodeOptions: SpawnOptions;
   persist: boolean;
-  stdin: ExecProcess;
+  stdin: Result | ExecProcess | string;
 }
 
 export interface SyncOptions extends CommonOptions {
@@ -257,8 +257,10 @@ export class ExecProcess implements Result {
 
     await this._processClosed;
 
-    if (this._options?.stdin) {
-      await this._options.stdin;
+    const {stdin} = this._options;
+
+    if (stdin && typeof stdin !== 'string') {
+      await stdin;
     }
 
     proc.removeAllListeners();
@@ -345,10 +347,13 @@ export class ExecProcess implements Result {
     handle.once('error', this._onError);
     handle.once('close', this._onClose);
 
-    if (options.stdin !== undefined && handle.stdin && options.stdin.process) {
-      const {stdout} = options.stdin.process;
-      if (stdout) {
-        stdout.pipe(handle.stdin);
+    if (handle.stdin) {
+      const {stdin} = options;
+
+      if (typeof stdin === 'string') {
+        handle.stdin.end(stdin);
+      } else {
+        stdin?.process?.stdout?.pipe(handle.stdin);
       }
     }
   }

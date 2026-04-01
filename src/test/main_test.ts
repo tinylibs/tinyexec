@@ -1,4 +1,4 @@
-import {x, xSync, NonZeroExitError} from '../main.js';
+import {x, xSync, ExecProcess, NonZeroExitError} from '../main.js';
 import {describe, test, expect} from 'vitest';
 import os from 'node:os';
 
@@ -60,6 +60,58 @@ describe('exec (async)', () => {
       await proc;
     }).rejects.toThrow(NonZeroExitError);
     expect(proc.exitCode).toBe(1);
+  });
+
+  test('supports stdin passed as a string', async () => {
+    let result = await x('node', ['-e', 'process.stdin.pipe(process.stdout)'], {
+      stdin: 'foo\nbar'
+    });
+
+    expect(result.stdout).toBe('foo\nbar');
+    expect(result.stderr).toBe('');
+    expect(result.exitCode).toBe(0);
+
+    // Ensuring that empty string doesn’t cause issues
+    result = await x(
+      'node',
+      ['-e', "process.stdout.write(String(fs.readFileSync(0,'utf8').length))"],
+      {stdin: ''}
+    );
+
+    expect(result.stdout).toBe('0');
+    expect(result.stderr).toBe('');
+    expect(result.exitCode).toBe(0);
+  });
+
+  test('supports stdin passed as another process (Result)', async () => {
+    const proc = x('node', ['-e', "process.stdout.write('foo\\nbar')"]);
+    const result = await x(
+      'node',
+      ['-e', 'process.stdin.pipe(process.stdout)'],
+      {stdin: proc}
+    );
+
+    expect(result.stdout).toBe('foo\nbar');
+    expect(result.stderr).toBe('');
+    expect(result.exitCode).toBe(0);
+  });
+
+  test('supports stdin passed as another process (ExecProcess)', async () => {
+    const proc = new ExecProcess('node', [
+      '-e',
+      "process.stdout.write('foo\\nbar')"
+    ]);
+    proc.spawn();
+
+    const result = await x(
+      'node',
+      ['-e', 'process.stdin.pipe(process.stdout)'],
+      {stdin: proc}
+    );
+
+    expect(result.stdout).toBe('foo\nbar');
+    expect(result.stderr).toBe('');
+    expect(result.exitCode).toBe(0);
   });
 });
 
