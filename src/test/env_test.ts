@@ -78,7 +78,7 @@ describe('computeEnv', () => {
     const cwd = path.resolve(pathSep, 'one', 'two', 'three');
 
     const env = computeEnv(cwd, {
-      PATH: originalPath
+      [pathKey]: originalPath
     });
 
     /**
