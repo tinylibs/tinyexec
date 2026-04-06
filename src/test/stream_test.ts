@@ -1,15 +1,15 @@
-import {combineStreams, waitForEvent} from '../stream.js';
-import {describe, test, expect} from 'vitest';
+import assert from 'node:assert';
 import {EventEmitter} from 'node:events';
 import {Readable} from 'node:stream';
+import {describe, test} from 'node:test';
 
-describe('waitForEvent', async () => {
-  test('waits for event to fire', async () => {
-    const emitter = new EventEmitter();
-    const waiter = waitForEvent(emitter, 'foo');
-    emitter.emit('foo');
-    await waiter;
-  });
+import {combineStreams, waitForEvent} from '../stream.js';
+
+test('waitForEvent waits for event to fire', async () => {
+  const emitter = new EventEmitter();
+  const waiter = waitForEvent(emitter, 'foo');
+  emitter.emit('foo');
+  await waiter;
 });
 
 describe('combineStreams', async () => {
@@ -21,7 +21,7 @@ describe('combineStreams', async () => {
       chunks.push(chunk.toString());
     });
     await waitForEvent(combined, 'end');
-    expect(chunks).toEqual(['foo', 'bar']);
+    assert.deepEqual(chunks, ['foo', 'bar']);
   });
 
   test('works with multiple streams', async () => {
@@ -33,7 +33,7 @@ describe('combineStreams', async () => {
       chunks.push(chunk.toString());
     });
     await waitForEvent(combined, 'end');
-    expect(chunks).toEqual(['foo', 'bar', 'baz']);
+    assert.deepEqual(chunks, ['foo', 'bar', 'baz']);
   });
 
   test('works with streams without auto-destroy', async () => {
@@ -45,7 +45,7 @@ describe('combineStreams', async () => {
       chunks.push(chunk.toString());
     });
     await waitForEvent(combined, 'end');
-    expect(chunks).toEqual(['foo', 'bar', 'baz']);
+    assert.deepEqual(chunks, ['foo', 'bar', 'baz']);
   });
 
   test('works with stream throwing an error', async () => {
@@ -67,6 +67,6 @@ describe('combineStreams', async () => {
       chunks.push(chunk.toString());
     });
     await waitForEvent(combined, 'end');
-    expect(chunks).toEqual(['foo', 'bar']); // no time for 'baz' before stream0 was destroyed
+    assert.deepEqual(chunks, ['foo', 'bar']); // no time for 'baz' before stream0 was destroyed
   });
 });

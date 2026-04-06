@@ -1,20 +1,18 @@
 {
   "compilerOptions": {
-    "target": "es2022",
-    "module": "node16",
-    "moduleResolution": "node16",
-    "types": ["node"],
     "declaration": true,
-    "outDir": "./lib",
+    "forceConsistentCasingInFileNames": true,
     "importHelpers": false,
     "isolatedModules": true,
-    "forceConsistentCasingInFileNames": true,
-    "strict": true,
+    "module": "node16",
+    "moduleResolution": "node16",
     "noUnusedLocals": true,
-    "noUnusedParameters": true
+    "noUnusedParameters": true,
+    "outDir": "./lib",
+    "rootDir": "./src",
+    "strict": true,
+    "target": "es2022",
+    "types": ["node"]
   },
-  "include": [
-    "src/**/*.ts",
-    "src/types/*.d.ts"
-  ]
+  "include": ["src/**/*.ts", "src/types/*.d.ts"]
 }

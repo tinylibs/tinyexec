@@ -1,99 +1,100 @@
-import {x, xSync, ExecProcess, NonZeroExitError} from '../main.js';
-import {describe, test, expect} from 'vitest';
+import assert from 'node:assert';
 import os from 'node:os';
+import {describe, test} from 'node:test';
+
+import {exec, execSync, ExecProcess, NonZeroExitError} from '../main.js';
 
 const isWindows = os.platform() === 'win32';
+const isBun = !!process.versions.bun;
 
-const variants = [
-  {name: 'async', x, isAsync: true},
-  {name: 'sync', x: xSync, isAsync: false}
-];
-
-describe.each(variants)('exec ($name)', ({x, isAsync}) => {
+describe('exec', () => {
   test('pid is number', async () => {
-    const proc = x('echo', ['foo']);
+    const proc = exec('echo', ['foo']);
     await proc;
-    expect(typeof proc.pid === 'number').ok;
+    assert.ok(typeof proc.pid === 'number');
   });
 
   test('exitCode is set correctly', async () => {
-    const proc = x('echo', ['foo']);
+    const proc = exec('echo', ['foo']);
 
     // only async API will have its exitCode undefined before awaiting;
     // for sync API the process has already exited by the time we reach here
-    if (isAsync) {
-      expect(proc.exitCode).toBe(undefined);
-    }
+    assert.equal(proc.exitCode, undefined);
 
     const result = await proc;
-    expect(proc.exitCode).toBe(0);
-    expect(result.exitCode).toBe(0);
+    assert.equal(proc.exitCode, 0);
+    assert.equal(result.exitCode, 0);
   });
 
   test('async iterator gets correct output', async () => {
-    const proc = x('node', ['-e', "console.log('foo'); console.log('bar');"]);
+    const proc = exec('node', [
+      '-e',
+      "console.log('foo'); console.log('bar');"
+    ]);
     const lines = [];
     for await (const line of proc) {
       lines.push(line);
     }
 
-    expect(lines).toEqual(['foo', 'bar']);
+    assert.deepEqual(lines, ['foo', 'bar']);
   });
 
   test('resolves to stdout', async () => {
-    const result = await x('node', ['-e', "console.log('foo')"]);
-    expect(result.stdout).toBe('foo\n');
-    expect(result.stderr).toBe('');
+    const result = await exec('node', ['-e', "console.log('foo')"]);
+    assert.equal(result.stdout, 'foo\n');
+    assert.equal(result.stderr, '');
   });
 
   test('captures stderr', async () => {
-    const result = await x('node', ['-e', "console.error('some error')"]);
-    expect(result.stderr).toBe('some error\n');
-    expect(result.stdout).toBe('');
+    const result = await exec('node', ['-e', "console.error('some error')"]);
+    assert.equal(result.stderr, 'some error\n');
+    assert.equal(result.stdout, '');
   });
-});
 
-describe('exec (async)', () => {
   test('non-zero exitCode throws when throwOnError=true', async () => {
-    const proc = x('node', ['-e', 'process.exit(1);'], {throwOnError: true});
-    await expect(async () => {
+    const proc = exec('node', ['-e', 'process.exit(1);'], {throwOnError: true});
+    await assert.rejects(async () => {
       await proc;
-    }).rejects.toThrow(NonZeroExitError);
-    expect(proc.exitCode).toBe(1);
+    }, NonZeroExitError);
+    assert.equal(proc.exitCode, 1);
   });
 
   test('supports stdin passed as a string', async () => {
-    let result = await x('node', ['-e', 'process.stdin.pipe(process.stdout)'], {
-      stdin: 'foo\nbar'
-    });
+    let result = await exec(
+      'node',
+      ['-e', 'process.stdin.pipe(process.stdout)'],
+      {
+        stdin: 'foo\nbar'
+      }
+    );
 
-    expect(result.stdout).toBe('foo\nbar');
-    expect(result.stderr).toBe('');
-    expect(result.exitCode).toBe(0);
+    assert.equal(result.stdout, 'foo\nbar');
+    assert.equal(result.stderr, '');
+    assert.equal(result.exitCode, 0);
 
     // Ensuring that empty string doesn’t cause issues
-    result = await x(
+    result = await exec(
       'node',
       ['-e', "process.stdout.write(String(fs.readFileSync(0,'utf8').length))"],
       {stdin: ''}
     );
 
-    expect(result.stdout).toBe('0');
-    expect(result.stderr).toBe('');
-    expect(result.exitCode).toBe(0);
+    assert.equal(result.stdout, '0');
+    assert.equal(result.stderr, '');
+    assert.equal(result.exitCode, 0);
   });
 
   test('supports stdin passed as another process (Result)', async () => {
-    const proc = x('node', ['-e', "process.stdout.write('foo\\nbar')"]);
-    const result = await x(
+    const proc = exec('node', ['-e', "process.stdout.write('foo\\nbar')"]);
+    const result = await exec(
       'node',
       ['-e', 'process.stdin.pipe(process.stdout)'],
       {stdin: proc}
     );
 
-    expect(result.stdout).toBe('foo\nbar');
-    expect(result.stderr).toBe('');
-    expect(result.exitCode).toBe(0);
+    assert.equal(result.stdout, 'foo\nbar');
+    assert.equal(result.stderr, '');
+    assert.equal(result.exitCode, 0);
   });
 
   test('supports stdin passed as another process (ExecProcess)', async () => {
@@ -103,221 +104,292 @@ describe('exec (async)', () => {
     ]);
     proc.spawn();
 
-    const result = await x(
+    const result = await exec(
       'node',
       ['-e', 'process.stdin.pipe(process.stdout)'],
       {stdin: proc}
     );
 
-    expect(result.stdout).toBe('foo\nbar');
-    expect(result.stderr).toBe('');
-    expect(result.exitCode).toBe(0);
+    assert.equal(result.stdout, 'foo\nbar');
+    assert.equal(result.stderr, '');
+    assert.equal(result.exitCode, 0);
   });
 });
 
-describe('exec (sync)', () => {
+describe('execSync', () => {
+  test('pid is number', async () => {
+    const result = execSync('echo', ['foo']);
+    assert.ok(typeof result.pid === 'number');
+  });
+
+  test('exitCode is set correctly', async () => {
+    const result = execSync('echo', ['foo']);
+    assert.equal(result.exitCode, 0);
+  });
+
+  test('async iterator gets correct output', async () => {
+    const result = execSync('node', [
+      '-e',
+      "console.log('foo'); console.log('bar');"
+    ]);
+    const lines = [];
+    for await (const line of result) {
+      lines.push(line);
+    }
+
+    assert.deepEqual(lines, ['foo', 'bar']);
+  });
+
+  test('resolves to stdout', async () => {
+    const result = execSync('node', ['-e', "console.log('foo')"]);
+    assert.equal(result.stdout, 'foo\n');
+    assert.equal(result.stderr, '');
+  });
+
+  test('captures stderr', async () => {
+    const result = execSync('node', ['-e', "console.error('some error')"]);
+    assert.equal(result.stderr, 'some error\n');
+    assert.equal(result.stdout, '');
+  });
+
   test('non-zero exitCode throws when throwOnError=true', () => {
-    expect(() => {
-      xSync('node', ['-e', 'process.exit(1);'], {throwOnError: true});
-    }).toThrow(NonZeroExitError);
+    assert.throws(
+      () => {
+        execSync('node', ['-e', 'process.exit(1);'], {throwOnError: true});
+      },
+      isBun
+        ? {message: 'Process exited with non-zero status (1)'}
+        : NonZeroExitError
+    );
   });
 });
 
-if (isWindows) {
-  describe.each(variants)('exec (windows) ($name)', ({x}) => {
+describe(
+  'execSync (windows)',
+  {skip: isWindows ? false : 'Skipped on unix-like'},
+  () => {
     test('does not throw spawn errors', async () => {
-      const result = await x('definitelyNonExistent');
-      expect(result.stderr).toBe(
+      const result = execSync('definitelyNonExistent');
+      assert.equal(
+        result.stderr,
         "'definitelyNonExistent' is not recognized as an internal" +
           ' or external command,\r\noperable program or batch file.\r\n'
       );
-      expect(result.stdout).toBe('');
-    });
-  });
-
-  describe('exec (windows) (async)', () => {
-    test('times out after defined timeout (ms)', async () => {
-      // Somewhat filthy way of waiting for 2 seconds across cmd/ps
-      const proc = x('ping', ['127.0.0.1', '-n', '2'], {timeout: 100});
-      await expect(async () => {
-        await proc;
-      }).rejects.toThrow();
-      expect(proc.killed).toBe(true);
-      expect(proc.process!.signalCode).toBe('SIGTERM');
+      assert.equal(result.stdout, '');
     });
 
-    test('throws spawn errors when throwOnError=true', async () => {
-      const proc = x('definitelyNonExistent', [], {throwOnError: true});
-      try {
-        await proc;
-        expect.fail('Expected to throw');
-      } catch (err) {
-        expect(err instanceof NonZeroExitError).ok;
-        expect((err as NonZeroExitError).output?.stderr).toBe(
-          "'definitelyNonExistent' is not recognized as an internal" +
-            ' or external command,\r\noperable program or batch file.\r\n'
-        );
-        expect((err as NonZeroExitError).output?.stdout).toBe('');
-      }
-    });
-
-    test('kill terminates the process', async () => {
-      // Somewhat filthy way of waiting for 2 seconds across cmd/ps
-      const proc = x('ping', ['127.0.0.1', '-n', '2']);
-      const result = proc.kill();
-      expect(result).ok;
-      expect(proc.killed).ok;
-      expect(proc.aborted).toBe(false);
-    });
-
-    test('pipe correctly pipes output', async () => {
-      const echoProc = x('node', ['-e', "console.log('foo')"]);
-      const grepProc = echoProc.pipe('findstr', ['f']);
-      const result = await grepProc;
-
-      expect(result.stderr).toBe('');
-      expect(result.stdout).toBe('foo\n');
-      expect(result.exitCode).toBe(0);
-      expect(echoProc.exitCode).toBe(0);
-      expect(grepProc.exitCode).toBe(0);
-    });
-
-    test('signal can be used to abort execution', async () => {
-      const controller = new AbortController();
-      // Somewhat filthy way of waiting for 2 seconds across cmd/ps
-      const proc = x('ping', ['127.0.0.1', '-n', '2'], {
-        signal: controller.signal
-      });
-      controller.abort();
-      const result = await proc;
-      expect(proc.aborted).ok;
-      expect(proc.killed).ok;
-      expect(result.stderr).toBe('');
-      expect(result.stdout).toBe('');
-    });
-
-    test('iterator receives errors as lines', async () => {
-      const proc = x('nonexistentforsure');
-      const lines: string[] = [];
-      for await (const line of proc) {
-        lines.push(line);
-      }
-
-      expect(lines).toEqual([
-        "'nonexistentforsure' is not recognized as an internal or " +
-          'external command,',
-        'operable program or batch file.'
-      ]);
-    });
-  });
-
-  describe('exec (windows) (sync)', () => {
     test('times out after defined timeout (ms)', () => {
-      expect(() => {
-        xSync('ping', ['127.0.0.1', '-n', '2'], {timeout: 100});
-      }).toThrow();
+      assert.throws(() => {
+        execSync('ping', ['127.0.0.1', '-n', '2'], {timeout: 100});
+      });
     });
 
     test('iterator receives errors as lines', () => {
-      const proc = xSync('nonexistentforsure');
+      const proc = execSync('nonexistentforsure');
       const lines: string[] = [];
       for (const line of proc) {
         lines.push(line);
       }
 
-      expect(lines).toEqual([
+      assert.deepEqual(lines, [
         "'nonexistentforsure' is not recognized as an internal or " +
           'external command,',
         'operable program or batch file.'
       ]);
     });
-  });
-}
+  }
+);
 
-if (!isWindows) {
-  describe('exec (unix-like) (async)', () => {
-    test('times out after defined timeout (ms)', async () => {
-      const proc = x('sleep', ['0.2'], {timeout: 100});
-      await expect(async () => {
-        await proc;
-      }).rejects.toThrow('The operation was aborted');
-      expect(proc.killed).toBe(true);
-      expect(proc.process!.signalCode).toBe('SIGTERM');
+describe(
+  'exec (windows)',
+  {skip: isWindows ? false : 'Skipped on unix-like'},
+  () => {
+    test('does not throw spawn errors', async () => {
+      const result = await exec('definitelyNonExistent');
+      assert.equal(
+        result.stderr,
+        "'definitelyNonExistent' is not recognized as an internal" +
+          ' or external command,\r\noperable program or batch file.\r\n'
+      );
+      assert.equal(result.stdout, '');
     });
 
-    test('throws spawn errors', async () => {
-      const proc = x('definitelyNonExistent');
-      await expect(async () => {
+    test('times out after defined timeout (ms)', async () => {
+      // Somewhat filthy way of waiting for 2 seconds across cmd/ps
+      const proc = exec('ping', ['127.0.0.1', '-n', '2'], {timeout: 100});
+      await assert.rejects(async () => {
         await proc;
-      }).rejects.toThrow(
-        process.versions.bun
-          ? 'Executable not found in $PATH: "definitelyNonExistent"'
-          : 'spawn definitelyNonExistent ENOENT'
-      );
+      });
+      assert.equal(proc.killed, true);
+      assert.equal(proc.process!.signalCode, 'SIGTERM');
+    });
+
+    test('throws spawn errors when throwOnError=true', async () => {
+      const proc = exec('definitelyNonExistent', [], {throwOnError: true});
+      try {
+        await proc;
+        assert.fail('Expected to throw');
+      } catch (err) {
+        assert.ok(err instanceof NonZeroExitError);
+        assert.equal(
+          (err as NonZeroExitError).output?.stderr,
+          "'definitelyNonExistent' is not recognized as an internal" +
+            ' or external command,\r\noperable program or batch file.\r\n'
+        );
+        assert.equal((err as NonZeroExitError).output?.stdout, '');
+      }
     });
 
     test('kill terminates the process', async () => {
-      const proc = x('sleep', ['5']);
+      // Somewhat filthy way of waiting for 2 seconds across cmd/ps
+      const proc = exec('ping', ['127.0.0.1', '-n', '2']);
       const result = proc.kill();
-      expect(result).ok;
-      expect(proc.killed).ok;
-      expect(proc.aborted).toBe(false);
+      assert.ok(result);
+      assert.ok(proc.killed);
+      assert.equal(proc.aborted, false);
     });
 
     test('pipe correctly pipes output', async () => {
-      const echoProc = x('echo', ['foo\nbar']);
-      const grepProc = echoProc.pipe('grep', ['foo']);
+      const echoProc = exec('node', ['-e', "console.log('foo')"]);
+      const grepProc = echoProc.pipe('findstr', ['f']);
       const result = await grepProc;
 
-      expect(result.stderr).toBe('');
-      expect(result.stdout).toBe('foo\n');
-      expect(result.exitCode).toBe(0);
-      expect(echoProc.exitCode).toBe(0);
-      expect(grepProc.exitCode).toBe(0);
+      assert.equal(result.stderr, '');
+      assert.equal(result.stdout, 'foo\n');
+      assert.equal(result.exitCode, 0);
+      assert.equal(echoProc.exitCode, 0);
+      assert.equal(grepProc.exitCode, 0);
     });
 
     test('signal can be used to abort execution', async () => {
       const controller = new AbortController();
-      const proc = x('sleep', ['4'], {signal: controller.signal});
+      // Somewhat filthy way of waiting for 2 seconds across cmd/ps
+      const proc = exec('ping', ['127.0.0.1', '-n', '2'], {
+        signal: controller.signal
+      });
       controller.abort();
       const result = await proc;
-      expect(proc.aborted).ok;
-      expect(proc.killed).ok;
-      expect(result.stderr).toBe('');
-      expect(result.stdout).toBe('');
+      assert.ok(proc.aborted);
+      assert.ok(proc.killed);
+      assert.equal(result.stderr, '');
+      assert.equal(result.stdout, '');
+    });
+
+    test('iterator receives errors as lines', async () => {
+      const proc = exec('nonexistentforsure');
+      const lines: string[] = [];
+      for await (const line of proc) {
+        lines.push(line);
+      }
+
+      assert.deepEqual(lines, [
+        "'nonexistentforsure' is not recognized as an internal or " +
+          'external command,',
+        'operable program or batch file.'
+      ]);
+    });
+  }
+);
+
+describe(
+  'exec (unix-like)',
+  {skip: isWindows ? 'Skipped on Windows' : false},
+  () => {
+    test('times out after defined timeout (ms)', async () => {
+      const proc = exec('sleep', ['0.2'], {timeout: 100});
+      await assert.rejects(async () => {
+        await proc;
+      }, /The operation was aborted/);
+      assert.equal(proc.killed, true);
+      assert.equal(proc.process!.signalCode, 'SIGTERM');
+    });
+
+    test('throws spawn errors', async () => {
+      const proc = exec('definitelyNonExistent');
+      await assert.rejects(
+        async () => {
+          await proc;
+        },
+        {
+          message: isBun
+            ? 'Executable not found in $PATH: "definitelyNonExistent"'
+            : 'spawn definitelyNonExistent ENOENT'
+        }
+      );
+    });
+
+    test('kill terminates the process', async () => {
+      const proc = exec('sleep', ['5']);
+      const result = proc.kill();
+      assert.ok(result);
+      assert.ok(proc.killed);
+      assert.equal(proc.aborted, false);
+    });
+
+    test('pipe correctly pipes output', async () => {
+      const echoProc = exec('echo', ['foo\nbar']);
+      const grepProc = echoProc.pipe('grep', ['foo']);
+      const result = await grepProc;
+
+      assert.equal(result.stderr, '');
+      assert.equal(result.stdout, 'foo\n');
+      assert.equal(result.exitCode, 0);
+      assert.equal(echoProc.exitCode, 0);
+      assert.equal(grepProc.exitCode, 0);
+    });
+
+    test('signal can be used to abort execution', async () => {
+      const controller = new AbortController();
+      const proc = exec('sleep', ['4'], {signal: controller.signal});
+      controller.abort();
+      const result = await proc;
+      assert.ok(proc.aborted);
+      assert.ok(proc.killed);
+      assert.equal(result.stderr, '');
+      assert.equal(result.stdout, '');
     });
 
     test('iterator receives errors', async () => {
-      const proc = x('nonexistentforsure');
-      await expect(async () => {
+      const proc = exec('nonexistentforsure');
+      await assert.rejects(async () => {
         for await (const line of proc) {
           line;
         }
-      }).rejects.toThrow();
+      });
     });
-  });
+  }
+);
 
-  describe('exec (unix-like) (sync)', () => {
+describe(
+  'execSync (unix-like)',
+  {skip: isWindows ? 'Skipped on Windows' : false},
+  () => {
     test('times out after defined timeout (ms)', () => {
-      expect(() => {
-        xSync('sleep', ['0.2'], {timeout: 100});
-      }).toThrow('spawnSync sleep ETIMEDOUT');
+      assert.throws(
+        () => {
+          execSync('sleep', ['0.2'], {timeout: 100});
+        },
+        {message: 'spawnSync sleep ETIMEDOUT'}
+      );
     });
 
     test('throws spawn errors', () => {
-      expect(() => {
-        xSync('definitelyNonExistent');
-      }).toThrow(
-        process.versions.bun
-          ? 'Executable not found in $PATH: "definitelyNonExistent"'
-          : 'spawnSync definitelyNonExistent ENOENT'
+      assert.throws(
+        () => {
+          execSync('definitelyNonExistent');
+        },
+        {
+          message: isBun
+            ? 'Executable not found in $PATH: "definitelyNonExistent"'
+            : 'spawnSync definitelyNonExistent ENOENT'
+        }
       );
     });
 
     test('iterator receives errors', () => {
-      expect(() => {
-        xSync('nonexistentforsure');
-      }).toThrow();
+      assert.throws(() => {
+        execSync('nonexistentforsure');
+      });
     });
-  });
-}
+  }
+);

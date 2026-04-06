@@ -1,16 +1,18 @@
+import assert from 'node:assert';
+import {describe, test} from 'node:test';
+
 import {computeEnv, getPathFromEnv} from '../env.js';
-import {expect, test, describe} from 'vitest';
 import process from 'node:process';
 import path, {sep as pathSep, delimiter as pathDelimiter} from 'node:path';
 
 const pathKey = getPathFromEnv(process.env).key;
 
-describe('computeEnv', async () => {
+describe('computeEnv', () => {
   test('adds node binaries to path', () => {
     const env = computeEnv(process.cwd());
     const path = env[pathKey]!;
 
-    expect(path.includes(`node_modules${pathSep}.bin`)).ok;
+    assert.ok(path.includes(`node_modules${pathSep}.bin`));
   });
 
   test('extends process env', () => {
@@ -20,11 +22,11 @@ describe('computeEnv', async () => {
 
     for (const key in process.env) {
       if (key.toUpperCase() !== 'PATH') {
-        expect(env[key]).toBe(process.env[key]);
+        assert.equal(env[key], process.env[key]);
       }
     }
 
-    expect(env.foo).toBe('bar');
+    assert.equal(env.foo, 'bar');
   });
 
   test('supports case-insensitive path keys', () => {
@@ -36,8 +38,8 @@ describe('computeEnv', async () => {
       });
       const keys = [...Object.keys(env)];
 
-      expect(keys.includes('PatH')).ok;
-      expect(!keys.includes(pathKey)).ok;
+      assert.ok(keys.includes('PatH'));
+      assert.ok(!keys.includes(pathKey));
     } finally {
       process.env[pathKey] = originalPath;
     }
@@ -51,8 +53,8 @@ describe('computeEnv', async () => {
         PatH: undefined
       });
 
-      expect(typeof env['PATH'] === 'string').ok;
-      expect(env['PatH']).toBe(undefined);
+      assert.ok(typeof env['PATH'] === 'string');
+      assert.equal(env['PatH'], undefined);
     } finally {
       process.env[pathKey] = originalPath;
     }
@@ -64,7 +66,7 @@ describe('computeEnv', async () => {
       delete process.env[pathKey];
       const env = computeEnv(process.cwd());
 
-      expect(typeof env['PATH'] === 'string').ok;
+      assert.ok(typeof env['PATH'] === 'string');
     } finally {
       process.env[pathKey] = originalPath;
     }
@@ -110,6 +112,6 @@ describe('computeEnv', async () => {
       originalPath
     ].join(pathDelimiter);
 
-    expect(env[pathKey]).toBe(expected);
+    assert.deepEqual(env[pathKey], expected);
   });
 });
