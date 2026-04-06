@@ -23,9 +23,11 @@ jobs:
     strategy:
       matrix:
         node-version:
-          - 20
-          - 22
-          - latest
+          - '18.x' # LTS "Hydrogen"
+          - '20.x' # LTS "Iron"
+          - '22.x' # LTS "Jod"
+          - '24.x' # LTS "Krypton"
+          - 'latest'
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
