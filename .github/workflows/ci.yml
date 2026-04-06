@@ -31,28 +31,33 @@ jobs:
             node_modules
 
   test:
-    name: Test on Node.js ${{ matrix.node-version }} @ ${{ matrix.os }}
+    name: Test on Node.js ${{ matrix.node.version }} @ ${{ matrix.os }}
     needs: build
     strategy:
       matrix:
-        node-version:
-          - '18.x' # LTS "Hydrogen"
-          - '20.x' # LTS "Iron"
-          - '22.x' # LTS "Jod"
-          - '24.x' # LTS "Krypton"
-          - 'latest'
+        node:
+          - version: '18.x' # LTS "Hydrogen"
+          - version: '20.x' # LTS "Iron"
+          - version: '22.x' # LTS "Jod"
+            NODE_OPTIONS: '--no-experimental-strip-types' # ignore source TS files
+          - version: '24.x' # LTS "Krypton"
+            NODE_OPTIONS: '--no-strip-types' # ignore source TS files
+          - version: 'latest'
+            NODE_OPTIONS: '--no-strip-types' # ignore source TS files
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js ${{ matrix.node.version }}
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ matrix.node.version }}
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: build
-      - run: npm run test --ignore-scripts # skip "pretest" script
+      - run: node --test
+        env:
+          NODE_OPTIONS: ${{ matrix.node.NODE_OPTIONS }}
 
   bun-build-test:
     name: Build on Bun (latest) @ ubuntu-latest
