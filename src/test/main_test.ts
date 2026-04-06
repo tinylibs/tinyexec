@@ -2,7 +2,12 @@ import assert from 'node:assert';
 import os from 'node:os';
 import {describe, test} from 'node:test';
 
-import {exec, execSync, ExecProcess, NonZeroExitError} from '../main.js';
+import {
+  exec,
+  execSync,
+  ExecProcess,
+  NonZeroExitError
+} from '../../dist/main.mjs';
 
 const isWindows = os.platform() === 'win32';
 const isBun = !!process.versions.bun;
