@@ -69,4 +69,5 @@ jobs:
           bun-version: latest
       - run: bun install
       - run: bun --bun run build
-      - run: bun test
+      - run: bun --bun run build:types
+      - run: bun test lib

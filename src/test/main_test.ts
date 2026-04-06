@@ -1,7 +1,7 @@
 import assert from 'node:assert';
 import os from 'node:os';
-import {describe, test} from 'node:test';
 
+import {describe, test} from './test_shim.js';
 import {
   exec,
   execSync,

@@ -1,9 +1,9 @@
 import assert from 'node:assert';
-import {describe, test} from 'node:test';
-
-import {computeEnv, getPathFromEnv} from '../env.js';
-import process from 'node:process';
 import path, {sep as pathSep, delimiter as pathDelimiter} from 'node:path';
+import process from 'node:process';
+
+import {describe, test} from './test_shim.js';
+import {computeEnv, getPathFromEnv} from '../env.js';
 
 const pathKey = getPathFromEnv(process.env).key;
 

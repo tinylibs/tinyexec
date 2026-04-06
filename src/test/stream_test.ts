@@ -1,8 +1,8 @@
 import assert from 'node:assert';
 import {EventEmitter} from 'node:events';
 import {Readable} from 'node:stream';
-import {describe, test} from 'node:test';
 
+import {describe, test} from './test_shim.js';
 import {combineStreams, waitForEvent} from '../stream.js';
 
 test('waitForEvent waits for event to fire', async () => {
