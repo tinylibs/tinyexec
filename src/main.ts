@@ -41,7 +41,7 @@ export interface OutputApi extends AsyncIterable<string>, CommonOutputApi {
 
   pipe(
     command: string,
-    args?: string[],
+    args?: readonly string[],
     options?: Partial<PipeOptions>
   ): Result;
   kill(signal?: KillSignal): boolean;
@@ -70,7 +70,7 @@ export interface SyncOptions extends CommonOptions {
 }
 
 export interface TinyExec {
-  (command: string, args?: string[], options?: Partial<Options>): Result;
+  (command: string, args?: readonly string[], options?: Partial<Options>): Result;
 }
 
 const defaultOptions: Partial<Options> = {
@@ -88,10 +88,10 @@ const defaultNodeOptions: SpawnOptions = {
 
 function normaliseCommandAndArgs(
   command: string,
-  args?: string[]
+  args?: readonly string[]
 ): {
   command: string;
-  args: string[];
+  args: readonly string[];
 } {
   const normalisedPath = normalizePath(command);
   const normalisedArgs = args ?? [];
@@ -141,7 +141,7 @@ export class ExecProcess implements Result {
   protected _aborted: boolean = false;
   protected _options: Partial<Options>;
   protected _command: string;
-  protected _args: string[];
+  protected _args: readonly string[];
   protected _resolveClose?: () => void;
   protected _processClosed: Promise<void>;
   protected _thrownError?: Error;
@@ -163,7 +163,7 @@ export class ExecProcess implements Result {
 
   public constructor(
     command: string,
-    args?: string[],
+    args?: readonly string[],
     options?: Partial<Options>
   ) {
     this._options = {
@@ -191,7 +191,7 @@ export class ExecProcess implements Result {
 
   public pipe(
     command: string,
-    args?: string[],
+    args?: readonly string[],
     options?: Partial<PipeOptions>
   ): Result {
     return exec(command, args, {
@@ -386,7 +386,7 @@ export class ExecProcess implements Result {
 
 export function xSync(
   command: string,
-  args?: string[],
+  args?: readonly string[],
   options?: Partial<SyncOptions>
 ): SyncResult {
   const opts = {...defaultSyncOptions, ...options};
