@@ -70,7 +70,7 @@ describe('computeEnv', async () => {
     }
   });
 
-  test('prepends local node_modules/.bin to PATH', () => {
+  test('prepends local node_modules/.bin and directory of node executable to PATH', () => {
     /** The original variable is just `PATH=/usr/local/bin` */
     const originalPath = path.join(pathSep, 'usr', 'local', 'bin');
     const cwd = path.resolve(pathSep, 'one', 'two', 'three');
@@ -90,12 +90,23 @@ describe('computeEnv', async () => {
      * running scripts.
      *
      * @link https://github.com/npm/run-script/blob/08ad35e66f0d09ed7a6b85b9a457e54859b70acd/lib/set-path.js#L37
+     *
+     * Additionally, the directory of the current `node` process executable is added
+     * to the PATH so that when spawning futher `node` processes, the same executable
+     * is preferred. This improves behavior when using symlinked `node`, for example
+     * with Node.js version managers and multiple different versions installed,
+     * or when using Node.js installed from the Ubuntu Snap store. In both cases,
+     * simply running `node` might end up with some other version of Node.js being
+     * spawned.
+     *
+     * @link https://nodejs.org/api/process.html#processexecpath
      */
     const expected = [
       path.resolve(pathSep, 'one', 'two', 'three', 'node_modules', '.bin'),
       path.resolve(pathSep, 'one', 'two', 'node_modules', '.bin'),
       path.resolve(pathSep, 'one', 'node_modules', '.bin'),
       path.resolve(pathSep, 'node_modules', '.bin'),
+      path.dirname(process.execPath),
       originalPath
     ].join(pathDelimiter);
 

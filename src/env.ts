@@ -36,18 +36,20 @@ export function getPathFromEnv(env: EnvLike): EnvPathInfo {
 
 function addNodeBinToPath(cwd: string, path: EnvPathInfo): EnvPathInfo {
   const parts = path.value.split(pathDelimiter);
-  const nodeModulesBinPaths: string[] = [];
+  const nodeBinPaths: string[] = [];
 
   let currentPath = cwd;
   let lastPath: string;
 
   do {
-    nodeModulesBinPaths.push(resolvePath(currentPath, 'node_modules', '.bin'));
+    nodeBinPaths.push(resolvePath(currentPath, 'node_modules', '.bin'));
     lastPath = currentPath;
     currentPath = dirname(currentPath);
   } while (currentPath !== lastPath);
 
-  const newPath = nodeModulesBinPaths.concat(parts).join(pathDelimiter);
+  nodeBinPaths.push(dirname(process.execPath));
+
+  const newPath = nodeBinPaths.concat(parts).join(pathDelimiter);
 
   return {key: path.key, value: newPath};
 }

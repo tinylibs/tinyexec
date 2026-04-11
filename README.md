@@ -58,11 +58,23 @@ await x('ls', [], {
 The options object can have the following properties:
 
 - `signal` - an `AbortSignal` to allow aborting of the execution
-- `timeout` - time in milliseconds at which the process will be forceably killed
+- `timeout` - time in milliseconds at which the process will be forcibly killed
 - `persist` - if `true`, the process will continue after the host exits
-- `stdin` - another `Result` can be used as the input to this process
+- `stdin` - `string` or another `Result` that will be used as the input to the process
 - `nodeOptions` - any valid options to node's underlying `spawn` function
 - `throwOnError` - if true, non-zero exit codes will throw an error
+
+### Passing a string to stdin
+
+You can pass a string to `stdin`, which is useful for whitespace-sensitive values and for secrets you shouldn’t be exposed in shell history:
+
+```ts
+const result = await x('gh', ['auth', 'login', '--with-token'], {
+  stdin: process.env.GITHUB_TOKEN
+});
+
+console.log(result.exitCode);
+```
 
 ### Piping to another process
 

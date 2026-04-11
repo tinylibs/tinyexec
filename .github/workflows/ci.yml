@@ -9,7 +9,6 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
@@ -18,9 +17,9 @@ jobs:
       - run: npm ci
       - run: npm run format:check
       - run: npm run lint
-  build:
-    name: Build ${{ matrix.node-version }} @ ${{ matrix.os }}
 
+  build:
+    name: Build on Node.js ${{ matrix.node-version }} @ ${{ matrix.os }}
     strategy:
       matrix:
         node-version:
@@ -28,9 +27,7 @@ jobs:
           - 22
           - latest
         os: [ubuntu-latest, windows-latest]
-
     runs-on: ${{ matrix.os }}
-
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Use Node.js ${{ matrix.node-version }}
@@ -39,3 +36,14 @@ jobs:
           node-version: ${{ matrix.node-version }}
       - run: npm ci
       - run: npm run test
+
+  bun-build:
+    name: Build on Bun (latest) @ ubuntu-latest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: latest
+      - run: bun install
+      - run: bun --bun run test

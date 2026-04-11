@@ -35,4 +35,38 @@ describe('combineStreams', async () => {
     await waitForEvent(combined, 'end');
     expect(chunks).toEqual(['foo', 'bar', 'baz']);
   });
+
+  test('works with streams without auto-destroy', async () => {
+    const stream0 = Readable.from(['foo'], {autoDestroy: false});
+    const stream1 = Readable.from(['bar', 'baz']);
+    const combined = combineStreams([stream0, stream1]);
+    const chunks: string[] = [];
+    combined.on('data', (chunk: Buffer) => {
+      chunks.push(chunk.toString());
+    });
+    await waitForEvent(combined, 'end');
+    expect(chunks).toEqual(['foo', 'bar', 'baz']);
+  });
+
+  test('works with stream throwing an error', async () => {
+    const stream0 = Readable.from({
+      async *[Symbol.asyncIterator]() {
+        yield 'foo';
+        yield 'baz';
+      }
+    });
+    const stream1 = Readable.from({
+      async *[Symbol.asyncIterator]() {
+        yield 'bar';
+        stream0.destroy(); // stream0 will throw `ERR_STREAM_PREMATURE_CLOSE`
+      }
+    });
+    const combined = combineStreams([stream0, stream1]);
+    const chunks: string[] = [];
+    combined.on('data', (chunk: Buffer) => {
+      chunks.push(chunk.toString());
+    });
+    await waitForEvent(combined, 'end');
+    expect(chunks).toEqual(['foo', 'bar']); // no time for 'baz' before stream0 was destroyed
+  });
 });
