@@ -70,7 +70,11 @@ export interface SyncOptions extends CommonOptions {
 }
 
 export interface TinyExec {
-  (command: string, args?: readonly string[], options?: Partial<Options>): Result;
+  (
+    command: string,
+    args?: readonly string[],
+    options?: Partial<Options>
+  ): Result;
 }
 
 const defaultOptions: Partial<Options> = {
