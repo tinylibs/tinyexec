@@ -66,7 +66,7 @@ The options object can have the following properties:
 
 ### Passing a string to stdin
 
-You can pass a string to `stdin`, which is useful for whitespace-sensitive values and for secrets you shouldn’t be exposed in shell history:
+You can pass a string to `stdin`, which is useful for whitespace-sensitive values and for secrets that shouldn’t be exposed in shell history:
 
 ```ts
 const result = await x('gh', ['auth', 'login', '--with-token'], {
