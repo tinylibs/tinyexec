@@ -3,19 +3,21 @@ import {closeSync, openSync, readSync, statSync} from 'node:fs';
 import {
   delimiter as pathDelimiter,
   normalize as normalizePath,
-  resolve as resolvePath,
-  sep as pathSeparator
+  resolve as resolvePath
 } from 'node:path';
 import {cwd as getCwd} from 'node:process';
-import {type EnvLike} from './env.js';
+import {getPathFromEnv, type EnvLike} from './env.js';
 
 // See http://www.robvanderwoude.com/escapechars.php
 const metaCharsRegExp = /([()\][%!^"`<>&|;, *?])/g;
 const shebangRegExp = /^#!\s*(.+)$/;
+const isWindowsExecutableRegExp = /\.(?:com|exe)$/i;
+const isNodeModulesCmdRegExp = /node_modules[\\/]\.bin[\\/][^\\/]+\.cmd$/i;
+const isWindows = process.platform === 'win32';
 
 interface CrossParseResult {
   command: string;
-  args: string[];
+  args: readonly string[];
   options: SpawnOptions;
 }
 
@@ -28,12 +30,12 @@ export function parse(
   // Build our parsed object
   const parsed: CrossParseResult = {
     command,
-    args: [...args],
+    args,
     options: {...options}
   };
 
   // Early return if use `shell` option or not on Windows.
-  if (parsed.options.shell === true || process.platform !== 'win32') {
+  if (parsed.options.shell === true || !isWindows) {
     return parsed;
   }
 
@@ -57,36 +59,36 @@ export function parse(
     const match = buffer.toString().match(shebangRegExp);
 
     if (match !== null) {
-      const separatorIndex = match[1].indexOf(' ');
-      if (separatorIndex !== -1) {
-        const path = match[1].slice(0, separatorIndex);
-        const argument = match[1].slice(separatorIndex + 1);
-        const binarySeparatorIndex = path.lastIndexOf('/');
-        const binary =
-          binarySeparatorIndex !== -1
-            ? path.slice(binarySeparatorIndex + 1)
-            : path;
+      const line = match[1].trim();
+      const separatorIndex = line.indexOf(' ');
+      const path = separatorIndex !== -1 ? line.slice(0, separatorIndex) : line;
+      const argument =
+        separatorIndex !== -1 ? line.slice(separatorIndex + 1) : '';
+      const binarySeparatorIndex = path.lastIndexOf('/');
+      const binary =
+        binarySeparatorIndex !== -1
+          ? path.slice(binarySeparatorIndex + 1)
+          : path;
 
-        shebang = binary === 'env' ? argument : binary;
-      }
+      shebang = binary === 'env' ? argument || null : binary;
     }
   }
 
   if (shebang !== null && file !== null) {
-    parsed.args.unshift(file);
+    parsed.args = [file, ...parsed.args];
     parsed.command = shebang;
 
     file = resolveCommand(parsed);
   }
 
   // We don't need a shell if the command filename is resolved and an executable
-  if (file === null || !/\.(?:com|exe)$/i.test(file)) {
+  if (file === null || !isWindowsExecutableRegExp.test(file)) {
     // Need to double escape meta chars if the command is a cmd-shim located in `node_modules/.bin/`
     // The cmd-shim simply calls execute the package bin file with NodeJS, proxying any argument
     // Because the escape of metachars with ^ gets interpreted when the cmd.exe is first called,
     // we need to double escape them
     const needsDoubleEscapeMetaChars =
-      file !== null && /node_modules[\\/]\.bin[\\/][^\\/]+\.cmd$/i.test(file);
+      file !== null && isNodeModulesCmdRegExp.test(file);
 
     // Normalize posix paths into OS compatible paths (e.g.: foo/bar -> foo\bar)
     // This is necessary otherwise it will always fail with ENOENT in those cases
@@ -140,15 +142,16 @@ export function parse(
 // From https://github.com/npm/node-which (ISC), Windows part only and sync version.
 function resolveCommand(parsed: CrossParseResult): string | null {
   const {command, options} = parsed;
-  const cwd = (options.cwd ?? getCwd()).toString() as string;
-  const env = options.env as EnvLike;
+  const cwd = (options.cwd ?? getCwd()).toString();
+  const env = options.env ?? process.env;
 
-  const PATH = (env.Path ?? env.PATH) as string;
+  const PATH = getPathFromEnv(env).value;
   const PATHEXT = env.PATHEXT ?? '.EXE;.CMD;.BAT;.COM';
 
-  const pathEnv = command.includes(pathSeparator)
-    ? ['']
-    : [cwd, ...PATH.split(pathDelimiter)];
+  const pathEnv =
+    command.includes('/') || command.includes('\\')
+      ? ['']
+      : [cwd, ...PATH.split(pathDelimiter)];
   const pathExt = PATHEXT.split(pathDelimiter);
 
   if (command.includes('.') && pathExt[0] !== '') {
@@ -156,16 +159,22 @@ function resolveCommand(parsed: CrossParseResult): string | null {
   }
 
   for (const path of pathEnv) {
-    const dest = resolvePath(path.replace(/^"(.*)"$/, '$1'), command);
+    const unquoted =
+      path.startsWith('"') && path.endsWith('"') && path.length > 1
+        ? path.slice(1, -1)
+        : path;
+    const dest = resolvePath(cwd, unquoted, command);
 
     for (const ext of pathExt) {
       const destWithExt = dest + ext;
 
       try {
         if (statSync(destWithExt).isFile()) {
-          return resolvePath(cwd, destWithExt);
+          return destWithExt;
         }
-      } catch {} // eslint-disable-line no-empty
+      } catch {
+        // do nothing, it didn't exist
+      }
     }
   }
 
