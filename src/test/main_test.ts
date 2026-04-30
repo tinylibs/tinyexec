@@ -1,6 +1,8 @@
 import {x, xSync, ExecProcess, NonZeroExitError} from '../main.js';
 import {describe, test, expect} from 'vitest';
 import os from 'node:os';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const isWindows = os.platform() === 'win32';
 
@@ -209,6 +211,23 @@ if (isWindows) {
         'operable program or batch file.'
       ]);
     });
+
+    test('preserves leading ./ so cwd-local binary is run, not PATH lookup', async () => {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tinyexec-relpath-'));
+      try {
+        const scriptPath = path.join(dir, 'mytool.cmd');
+        fs.writeFileSync(scriptPath, '@echo local\r\n');
+
+        const result = await x('./mytool.cmd', [], {
+          nodeOptions: {cwd: dir}
+        });
+
+        expect(result.exitCode).toBe(0);
+        expect(result.stdout).toBe('local\r\n');
+      } finally {
+        fs.rmSync(dir, {recursive: true, force: true});
+      }
+    });
   });
 
   describe('exec (windows) (sync)', () => {
@@ -230,6 +249,23 @@ if (isWindows) {
           'external command,',
         'operable program or batch file.'
       ]);
+    });
+
+    test('preserves leading ./ so cwd-local binary is run, not PATH lookup', () => {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tinyexec-relpath-'));
+      try {
+        const scriptPath = path.join(dir, 'mytool.cmd');
+        fs.writeFileSync(scriptPath, '@echo local\r\n');
+
+        const result = xSync('./mytool.cmd', [], {
+          nodeOptions: {cwd: dir}
+        });
+
+        expect(result.exitCode).toBe(0);
+        expect(result.stdout).toBe('local\r\n');
+      } finally {
+        fs.rmSync(dir, {recursive: true, force: true});
+      }
     });
   });
 }
@@ -295,6 +331,24 @@ if (!isWindows) {
         }
       }).rejects.toThrow();
     });
+
+    test('preserves leading ./ so cwd-local binary is run, not PATH lookup', async () => {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tinyexec-relpath-'));
+      try {
+        const scriptPath = path.join(dir, 'mytool');
+        fs.writeFileSync(scriptPath, '#!/bin/sh\necho local\n');
+        fs.chmodSync(scriptPath, 0o755);
+
+        const result = await x('./mytool', [], {
+          nodeOptions: {cwd: dir, env: {PATH: '/usr/bin:/bin'}}
+        });
+
+        expect(result.exitCode).toBe(0);
+        expect(result.stdout).toBe('local\n');
+      } finally {
+        fs.rmSync(dir, {recursive: true, force: true});
+      }
+    });
   });
 
   describe('exec (unix-like) (sync)', () => {
@@ -318,6 +372,24 @@ if (!isWindows) {
       expect(() => {
         xSync('nonexistentforsure');
       }).toThrow();
+    });
+
+    test('preserves leading ./ so cwd-local binary is run, not PATH lookup', () => {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tinyexec-relpath-'));
+      try {
+        const scriptPath = path.join(dir, 'mytool');
+        fs.writeFileSync(scriptPath, '#!/bin/sh\necho local\n');
+        fs.chmodSync(scriptPath, 0o755);
+
+        const result = xSync('./mytool', [], {
+          nodeOptions: {cwd: dir, env: {PATH: '/usr/bin:/bin'}}
+        });
+
+        expect(result.exitCode).toBe(0);
+        expect(result.stdout).toBe('local\n');
+      } finally {
+        fs.rmSync(dir, {recursive: true, force: true});
+      }
     });
   });
 }

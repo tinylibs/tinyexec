@@ -6,7 +6,6 @@ import {
   type SpawnSyncOptions
 } from 'node:child_process';
 import {type Readable} from 'node:stream';
-import {normalize as normalizePath} from 'node:path';
 import {cwd as getCwd} from 'node:process';
 import {computeEnv} from './env.js';
 import {combineStreams} from './stream.js';
@@ -41,7 +40,7 @@ export interface OutputApi extends AsyncIterable<string>, CommonOutputApi {
 
   pipe(
     command: string,
-    args?: string[],
+    args?: readonly string[],
     options?: Partial<PipeOptions>
   ): Result;
   kill(signal?: KillSignal): boolean;
@@ -70,7 +69,11 @@ export interface SyncOptions extends CommonOptions {
 }
 
 export interface TinyExec {
-  (command: string, args?: string[], options?: Partial<Options>): Result;
+  (
+    command: string,
+    args?: readonly string[],
+    options?: Partial<Options>
+  ): Result;
 }
 
 const defaultOptions: Partial<Options> = {
@@ -85,22 +88,6 @@ const defaultSyncOptions: Partial<SyncOptions> = {
 const defaultNodeOptions: SpawnOptions = {
   windowsHide: true
 };
-
-function normaliseCommandAndArgs(
-  command: string,
-  args?: string[]
-): {
-  command: string;
-  args: string[];
-} {
-  const normalisedPath = normalizePath(command);
-  const normalisedArgs = args ?? [];
-
-  return {
-    command: normalisedPath,
-    args: normalisedArgs
-  };
-}
 
 function combineSignals(signals: Iterable<AbortSignal>): AbortSignal {
   const controller = new AbortController();
@@ -141,7 +128,7 @@ export class ExecProcess implements Result {
   protected _aborted: boolean = false;
   protected _options: Partial<Options>;
   protected _command: string;
-  protected _args: string[];
+  protected _args: readonly string[];
   protected _resolveClose?: () => void;
   protected _processClosed: Promise<void>;
   protected _thrownError?: Error;
@@ -163,7 +150,7 @@ export class ExecProcess implements Result {
 
   public constructor(
     command: string,
-    args?: string[],
+    args?: readonly string[],
     options?: Partial<Options>
   ) {
     this._options = {
@@ -191,7 +178,7 @@ export class ExecProcess implements Result {
 
   public pipe(
     command: string,
-    args?: string[],
+    args?: readonly string[],
     options?: Partial<PipeOptions>
   ): Result {
     return exec(command, args, {
@@ -325,10 +312,14 @@ export class ExecProcess implements Result {
 
     nodeOptions.env = computeEnv(cwd, nodeOptions.env);
 
+<<<<<<< HEAD
     const {command: normalisedCommand, args: normalisedArgs} =
       normaliseCommandAndArgs(this._command, this._args);
 
     const crossResult = parse(normalisedCommand, normalisedArgs, nodeOptions);
+=======
+    const crossResult = _parse(this._command, this._args, nodeOptions);
+>>>>>>> main
 
     const handle = spawn(
       crossResult.command,
@@ -386,7 +377,7 @@ export class ExecProcess implements Result {
 
 export function xSync(
   command: string,
-  args?: string[],
+  args?: readonly string[],
   options?: Partial<SyncOptions>
 ): SyncResult {
   const opts = {...defaultSyncOptions, ...options};
@@ -402,10 +393,14 @@ export function xSync(
 
   nodeOptions.env = computeEnv(cwd, nodeOptions.env);
 
+<<<<<<< HEAD
   const {command: normalisedCommand, args: normalisedArgs} =
     normaliseCommandAndArgs(command, args);
 
   const crossResult = parse(normalisedCommand, normalisedArgs, nodeOptions);
+=======
+  const crossResult = _parse(command, args ?? [], nodeOptions);
+>>>>>>> main
 
   const spawnResult = spawnSync(
     crossResult.command,

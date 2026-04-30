@@ -22,7 +22,7 @@ interface CrossParseResult {
 // From https://github.com/moxystudio/node-cross-spawn (MIT)
 export function parse(
   command: string,
-  args: string[] = [],
+  args: readonly string[] = [],
   options: SpawnOptions = {}
 ): CrossParseResult {
   // Build our parsed object
