@@ -312,14 +312,7 @@ export class ExecProcess implements Result {
 
     nodeOptions.env = computeEnv(cwd, nodeOptions.env);
 
-<<<<<<< HEAD
-    const {command: normalisedCommand, args: normalisedArgs} =
-      normaliseCommandAndArgs(this._command, this._args);
-
-    const crossResult = parse(normalisedCommand, normalisedArgs, nodeOptions);
-=======
-    const crossResult = _parse(this._command, this._args, nodeOptions);
->>>>>>> main
+    const crossResult = parse(this._command, this._args, nodeOptions);
 
     const handle = spawn(
       crossResult.command,
@@ -393,14 +386,7 @@ export function xSync(
 
   nodeOptions.env = computeEnv(cwd, nodeOptions.env);
 
-<<<<<<< HEAD
-  const {command: normalisedCommand, args: normalisedArgs} =
-    normaliseCommandAndArgs(command, args);
-
-  const crossResult = parse(normalisedCommand, normalisedArgs, nodeOptions);
-=======
-  const crossResult = _parse(command, args ?? [], nodeOptions);
->>>>>>> main
+  const crossResult = parse(command, args ?? [], nodeOptions);
 
   const spawnResult = spawnSync(
     crossResult.command,
