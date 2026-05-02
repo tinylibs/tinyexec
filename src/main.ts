@@ -10,10 +10,10 @@ import {cwd as getCwd} from 'node:process';
 import {computeEnv} from './env.js';
 import {combineStreams} from './stream.js';
 import readline from 'node:readline';
-import {parse} from './parse.js';
+import {normalizeSpawnCommand} from './normalize.js';
 import {NonZeroExitError} from './non-zero-exit-error.js';
 
-export {NonZeroExitError};
+export {NonZeroExitError, normalizeSpawnCommand};
 
 const LINE_SEPARATOR_REGEX = /\r?\n/;
 
@@ -312,7 +312,11 @@ export class ExecProcess implements Result {
 
     nodeOptions.env = computeEnv(cwd, nodeOptions.env);
 
-    const crossResult = parse(this._command, this._args, nodeOptions);
+    const crossResult = normalizeSpawnCommand(
+      this._command,
+      this._args,
+      nodeOptions
+    );
 
     const handle = spawn(
       crossResult.command,
@@ -386,7 +390,7 @@ export function xSync(
 
   nodeOptions.env = computeEnv(cwd, nodeOptions.env);
 
-  const crossResult = parse(command, args ?? [], nodeOptions);
+  const crossResult = normalizeSpawnCommand(command, args ?? [], nodeOptions);
 
   const spawnResult = spawnSync(
     crossResult.command,

@@ -3,7 +3,8 @@ import {closeSync, openSync, readSync, statSync} from 'node:fs';
 import {
   delimiter as pathDelimiter,
   normalize as normalizePath,
-  resolve as resolvePath
+  resolve as resolvePath,
+  basename
 } from 'node:path';
 import {cwd as getCwd} from 'node:process';
 import {getPathFromEnv} from './env.js';
@@ -14,33 +15,32 @@ const shebangRegExp = /^#!\s*(.+)$/;
 const isWindowsExecutableRegExp = /\.(?:com|exe)$/i;
 const isNodeModulesCmdRegExp = /node_modules[\\/]\.bin[\\/][^\\/]+\.cmd$/i;
 const isWindows = process.platform === 'win32';
+const defaultPathExt = ['.EXE', '.CMD', '.BAT', '.COM'];
 
-interface CrossParseResult {
+interface NormalizedSpawnCommand {
   command: string;
   args: readonly string[];
   options: SpawnOptions;
 }
 
-// From https://github.com/moxystudio/node-cross-spawn (MIT)
-export function parse(
+/**
+ * Normalizes the command and arguments to work cross-platform.
+ * On Windows, this basically handles things like shebangs, calling
+ * `node_modules/.bin` commands, and escaping meta characters.
+ * On other platforms, it just returns the command and arguments as-is.
+ */
+export function normalizeSpawnCommand(
   command: string,
   args: readonly string[] = [],
   options: SpawnOptions = {}
-): CrossParseResult {
-  // Build our parsed object
-  const parsed: CrossParseResult = {
-    command,
-    args,
-    options: {...options}
-  };
-
+): NormalizedSpawnCommand {
   // Early return if use `shell` option or not on Windows.
-  if (parsed.options.shell === true || !isWindows) {
-    return parsed;
+  if (options.shell === true || !isWindows) {
+    return {command, args, options};
   }
 
   // Detect & add support for shebangs
-  let file = resolveCommand(parsed);
+  let file = resolveCommand(command, options);
   let shebang: string | null = null;
 
   if (file !== null) {
@@ -48,12 +48,16 @@ export function parse(
     const size = 150;
     const buffer = Buffer.alloc(size);
 
+    let fd: number | null = null;
     try {
-      const fd = openSync(file, 'r');
+      fd = openSync(file, 'r');
       readSync(fd, buffer, 0, size, 0);
-      closeSync(fd);
     } catch {
       // do nothing, we'll just assume it's not a shebang
+    } finally {
+      if (fd !== null) {
+        closeSync(fd);
+      }
     }
 
     const match = buffer.toString().match(shebangRegExp);
@@ -64,21 +68,17 @@ export function parse(
       const path = separatorIndex !== -1 ? line.slice(0, separatorIndex) : line;
       const argument =
         separatorIndex !== -1 ? line.slice(separatorIndex + 1) : '';
-      const binarySeparatorIndex = path.lastIndexOf('/');
-      const binary =
-        binarySeparatorIndex !== -1
-          ? path.slice(binarySeparatorIndex + 1)
-          : path;
+      const binary = basename(path);
 
       shebang = binary === 'env' ? argument || null : binary;
     }
   }
 
   if (shebang !== null && file !== null) {
-    parsed.args = [file, ...parsed.args];
-    parsed.command = shebang;
+    args = [file, ...args];
+    command = shebang;
 
-    file = resolveCommand(parsed);
+    file = resolveCommand(command, options);
   }
 
   // We don't need a shell if the command filename is resolved and an executable
@@ -92,11 +92,11 @@ export function parse(
 
     // Normalize posix paths into OS compatible paths (e.g.: foo/bar -> foo\bar)
     // This is necessary otherwise it will always fail with ENOENT in those cases
-    parsed.command = normalizePath(parsed.command);
+    command = normalizePath(command);
 
     // Escape command & arguments
-    parsed.command = parsed.command.replace(metaCharsRegExp, '^$1');
-    parsed.args = parsed.args.map((arg) => {
+    command = command.replace(metaCharsRegExp, '^$1');
+    args = args.map((arg) => {
       // Algorithm below is based on https://qntm.org/cmd
       // It's slightly altered to disable JS backtracking to avoid hanging on specially crafted input
       // Please see https://github.com/moxystudio/node-cross-spawn/pull/160 for more information
@@ -126,33 +126,31 @@ export function parse(
       return arg;
     });
 
-    parsed.args = [
-      '/d',
-      '/s',
-      '/c',
-      `"${[parsed.command, ...parsed.args].join(' ')}"`
-    ];
-    parsed.command = parsed.options.env?.comspec ?? 'cmd.exe';
-    parsed.options.windowsVerbatimArguments = true; // Tell node's spawn that the arguments are already escaped
+    args = ['/d', '/s', '/c', `"${[command, ...args].join(' ')}"`];
+    command = options.env?.comspec ?? 'cmd.exe';
+    // Tell node's spawn that the arguments are already escaped
+    options = {...options, windowsVerbatimArguments: true};
   }
 
-  return parsed;
+  return {command, args, options};
 }
 
-// From https://github.com/npm/node-which (ISC), Windows part only and sync version.
-function resolveCommand(parsed: CrossParseResult): string | null {
-  const {command, options} = parsed;
+/**
+ * Resolves the command to an absolute path if possible.
+ * Handles things like traversing PATH and adding extensions from PATHEXT
+ */
+function resolveCommand(command: string, options: SpawnOptions): string | null {
   const cwd = (options.cwd ?? getCwd()).toString();
   const env = options.env ?? process.env;
-
   const PATH = getPathFromEnv(env).value;
-  const PATHEXT = env.PATHEXT ?? '.EXE;.CMD;.BAT;.COM';
 
   const pathEnv =
     command.includes('/') || command.includes('\\')
       ? ['']
       : [cwd, ...PATH.split(pathDelimiter)];
-  const pathExt = PATHEXT.split(pathDelimiter);
+  const pathExt = env.PATHEXT
+    ? env.PATHEXT.split(pathDelimiter)
+    : defaultPathExt;
 
   if (command.includes('.') && pathExt[0] !== '') {
     pathExt.unshift('');
