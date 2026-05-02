@@ -6,7 +6,7 @@ import {
   resolve as resolvePath
 } from 'node:path';
 import {cwd as getCwd} from 'node:process';
-import {getPathFromEnv, type EnvLike} from './env.js';
+import {getPathFromEnv} from './env.js';
 
 // See http://www.robvanderwoude.com/escapechars.php
 const metaCharsRegExp = /([()\][%!^"`<>&|;, *?])/g;
