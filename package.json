@@ -13,11 +13,10 @@
   ],
   "scripts": {
     "build": "tsdown",
-    "build:types": "tsc",
     "dev": "tsdown --watch",
     "format": "prettier --write src",
     "format:check": "prettier --check src",
-    "lint": "eslint src && publint",
+    "lint": "tsc --noEmit && eslint src && publint",
     "prepare": "npm run build",
     "test": "npm run build && vitest run"
   },
