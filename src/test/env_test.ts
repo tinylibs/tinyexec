@@ -70,6 +70,29 @@ describe('computeEnv', async () => {
     }
   });
 
+  test('does not add node binaries when nodePath is false', () => {
+    const originalPath = path.join(pathSep, 'usr', 'local', 'bin');
+    const cwd = path.resolve(pathSep, 'one', 'two', 'three');
+
+    const env = computeEnv(cwd, {PATH: originalPath}, false);
+
+    expect(env[pathKey]).toBe(originalPath);
+    expect(env[pathKey]!.includes(`node_modules${pathSep}.bin`)).toBe(false);
+  });
+
+  test('adds node binaries when nodePath is true (default)', () => {
+    const originalPath = path.join(pathSep, 'usr', 'local', 'bin');
+    const cwd = path.resolve(pathSep, 'one', 'two', 'three');
+
+    const explicit = computeEnv(cwd, {PATH: originalPath}, true);
+    const implicit = computeEnv(cwd, {PATH: originalPath});
+
+    expect(explicit[pathKey]).toBe(implicit[pathKey]);
+    expect(explicit[pathKey]!.includes(`node_modules${pathSep}.bin`)).toBe(
+      true
+    );
+  });
+
   test('prepends local node_modules/.bin and directory of node executable to PATH', () => {
     /** The original variable is just `PATH=/usr/local/bin` */
     const originalPath = path.join(pathSep, 'usr', 'local', 'bin');

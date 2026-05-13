@@ -55,6 +55,7 @@ export type SyncResult = Output & OutputApiSync;
 export interface CommonOptions {
   timeout: number;
   throwOnError: boolean;
+  nodePath: boolean;
 }
 
 export interface Options extends CommonOptions {
@@ -310,7 +311,7 @@ export class ExecProcess implements Result {
       nodeOptions.signal = combineSignals(signals);
     }
 
-    nodeOptions.env = computeEnv(cwd, nodeOptions.env);
+    nodeOptions.env = computeEnv(cwd, nodeOptions.env, options.nodePath);
 
     const crossResult = normalizeSpawnCommand(
       this._command,
@@ -388,7 +389,7 @@ export function xSync(
     nodeOptions.timeout = opts.timeout;
   }
 
-  nodeOptions.env = computeEnv(cwd, nodeOptions.env);
+  nodeOptions.env = computeEnv(cwd, nodeOptions.env, opts.nodePath);
 
   const crossResult = normalizeSpawnCommand(command, args ?? [], nodeOptions);
 

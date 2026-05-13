@@ -63,6 +63,7 @@ The options object can have the following properties:
 - `stdin` - `string` or another `Result` that will be used as the input to the process
 - `nodeOptions` - any valid options to node's underlying `spawn` function
 - `throwOnError` - if true, non-zero exit codes will throw an error
+- `nodePath` - if `false`, `node_modules/.bin` directories and the current node executable's directory will not be prepended to `PATH` (defaults to `true`)
 
 ### Passing a string to stdin
 
@@ -122,6 +123,13 @@ await x('eslint', ['.']);
 ```
 
 In this example, `eslint` will come from the locally installed `node_modules`.
+
+If you'd rather not have `node_modules/.bin` (or the directory of the current
+`node` executable) prepended to `PATH`, pass `nodePath: false`:
+
+```ts
+await x('eslint', ['.'], {nodePath: false});
+```
 
 ### Using an abort signal
 

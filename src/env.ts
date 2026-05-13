@@ -54,11 +54,20 @@ function addNodeBinToPath(cwd: string, path: EnvPathInfo): EnvPathInfo {
   return {key: path.key, value: newPath};
 }
 
-export function computeEnv(cwd: string, env?: EnvLike): EnvLike {
+export function computeEnv(
+  cwd: string,
+  env?: EnvLike,
+  nodePath: boolean = true
+): EnvLike {
   const envWithDefault = {
     ...process.env,
     ...env
   };
+
+  if (!nodePath) {
+    return envWithDefault;
+  }
+
   const envPathInfo = addNodeBinToPath(cwd, getPathFromEnv(envWithDefault));
   envWithDefault[envPathInfo.key] = envPathInfo.value;
 
