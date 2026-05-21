@@ -21,7 +21,6 @@ jobs:
   publish-npm:
     needs: build
     runs-on: ubuntu-latest
-    environment: WORLD
     permissions:
       id-token: write
       contents: read
@@ -38,7 +37,7 @@ jobs:
       - run: npm version ${TAG_NAME} --git-tag-version=false
         env:
           TAG_NAME: ${{ github.ref_name }}
-      - run: npm publish --access public --tag next
+      - run: npm stage publish --access public --tag next
         if: github.event.release.prerelease
-      - run: npm publish --access public
+      - run: npm stage publish --access public
         if: "!github.event.release.prerelease"
