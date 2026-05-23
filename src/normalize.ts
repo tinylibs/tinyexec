@@ -14,6 +14,7 @@ const metaCharsRegExp = /([()\][%!^"`<>&|;, *?])/g;
 const shebangRegExp = /^#!\s*(.+)$/;
 const isWindowsExecutableRegExp = /\.(?:com|exe)$/i;
 const isNodeModulesCmdRegExp = /node_modules[\\/]\.bin[\\/][^\\/]+\.cmd$/i;
+const hasSeparatorRegExp = /[\\/]/;
 const isWindows = process.platform === 'win32';
 const defaultPathExt = ['.EXE', '.CMD', '.BAT', '.COM'];
 
@@ -144,10 +145,9 @@ function resolveCommand(command: string, options: SpawnOptions): string | null {
   const env = options.env ?? process.env;
   const PATH = getPathFromEnv(env).value;
 
-  const pathEnv =
-    command.includes('/') || command.includes('\\')
-      ? ['']
-      : [cwd, ...PATH.split(pathDelimiter)];
+  const pathEnv = hasSeparatorRegExp.test(command)
+    ? ['']
+    : [cwd, ...PATH.split(pathDelimiter)];
   const pathExt = env.PATHEXT
     ? env.PATHEXT.split(pathDelimiter)
     : defaultPathExt;
