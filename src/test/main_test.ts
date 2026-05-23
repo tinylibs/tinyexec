@@ -64,6 +64,20 @@ describe('exec (async)', () => {
     expect(proc.exitCode).toBe(1);
   });
 
+  test('async iterator throws when throwOnError=true and exit non-zero', async () => {
+    const proc = x('node', ['-e', "console.log('foo'); process.exit(1);"], {
+      throwOnError: true
+    });
+    const lines: string[] = [];
+    await expect(async () => {
+      for await (const line of proc) {
+        lines.push(line);
+      }
+    }).rejects.toThrow(NonZeroExitError);
+    expect(lines).toEqual(['foo']);
+    expect(proc.exitCode).toBe(1);
+  });
+
   test('supports stdin passed as a string', async () => {
     let result = await x('node', ['-e', 'process.stdin.pipe(process.stdout)'], {
       stdin: 'foo\nbar'
