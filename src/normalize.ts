@@ -11,7 +11,7 @@ import {getPathFromEnv} from './env.js';
 
 // See http://www.robvanderwoude.com/escapechars.php
 const metaCharsRegExp = /([()\][%!^"`<>&|;, *?])/g;
-const shebangRegExp = /^#!\s*(.+)$/;
+const shebangRegExp = /^#!\s*(.+)/;
 const isWindowsExecutableRegExp = /\.(?:com|exe)$/i;
 const isNodeModulesCmdRegExp = /node_modules[\\/]\.bin[\\/][^\\/]+\.cmd$/i;
 const isWindows = process.platform === 'win32';

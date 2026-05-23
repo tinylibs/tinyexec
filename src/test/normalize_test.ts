@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 const isWindows = os.platform() === 'win32';
 const fixturesPath = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
-  '../test/fixtures'
+  '../../test/fixtures'
 );
 const cwd = process.cwd();
 
@@ -59,6 +59,16 @@ describe('normalizeSpawnCommand', () => {
         args: ['/d', '/s', '/c', `"${relativePath}"`],
         options: {windowsVerbatimArguments: true}
       });
+    });
+
+    test('detects shebang and rewrites command to interpreter', () => {
+      const scriptPath = path.join(fixturesPath, 'shebang_script.js');
+      const normalized = normalizeSpawnCommand(scriptPath, []);
+
+      // where resolves to where.exe (always a .exe in System32, never a
+      // shim), so the cmd.exe wrapping branch is skipped
+      expect(normalized.command).toBe('where');
+      expect(normalized.args).toEqual([scriptPath]);
     });
 
     test('handles relative commands without extension', () => {
