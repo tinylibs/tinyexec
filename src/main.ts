@@ -334,6 +334,7 @@ export class ExecProcess implements Result {
 
     this._process = handle;
     handle.once('error', this._onError);
+    handle.once('exit', this._onExit);
     handle.once('close', this._onClose);
 
     if (handle.stdin) {
@@ -364,6 +365,15 @@ export class ExecProcess implements Result {
       return;
     }
     this._thrownError = err;
+  };
+
+  protected _onExit = (): void => {
+    // Destroy piped streams when the child process exits, even if grandchild
+    // processes still hold the underlying file descriptors open. Without this,
+    // the 'close' event never fires (it waits for all fds to be released),
+    // causing readStream and combineStreams to hang indefinitely.
+    this._streamOut?.destroy();
+    this._streamErr?.destroy();
   };
 
   protected _onClose = (): void => {
