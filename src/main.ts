@@ -368,12 +368,16 @@ export class ExecProcess implements Result {
   };
 
   protected _onExit = (): void => {
-    // Destroy piped streams when the child process exits, even if grandchild
-    // processes still hold the underlying file descriptors open. Without this,
-    // the 'close' event never fires (it waits for all fds to be released),
-    // causing readStream and combineStreams to hang indefinitely.
-    this._streamOut?.destroy();
-    this._streamErr?.destroy();
+    // Node emits 'exit' before stdio streams have drained. Use setImmediate
+    // to let buffered data flow through before destroying the streams.
+    // If grandchild processes hold the pipe fds open, 'close' never fires,
+    // so we destroy here to unblock readStream and combineStreams.
+    const out = this._streamOut;
+    const err = this._streamErr;
+    setImmediate(() => {
+      out?.destroy();
+      err?.destroy();
+    });
   };
 
   protected _onClose = (): void => {
