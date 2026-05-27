@@ -370,8 +370,8 @@ export class ExecProcess implements Result {
   protected _onExit = (): void => {
     // Node emits 'exit' before stdio streams have drained. Use setImmediate
     // to let buffered data flow through before destroying the streams.
-    // If grandchild processes hold the pipe fds open, 'close' never fires,
-    // so we destroy here to unblock readStream and combineStreams.
+    // If grandchild processes hold the pipe fds open, they would never fire
+    // 'close', so we destroy here to unblock readStream and combineStreams.
     const out = this._streamOut;
     const err = this._streamErr;
     setImmediate(() => {
