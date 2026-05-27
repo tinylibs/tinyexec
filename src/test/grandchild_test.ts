@@ -5,41 +5,15 @@ import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 
 const isWindows = os.platform() === 'win32';
+const fixturesDir = path.join(import.meta.dirname, '../../test/fixtures');
 
-function runInSubprocess(
-  childScript: string,
-  runnerBody: string
-): {status: number | null; signal: string | null; stdout: string} {
-  const dir = path.dirname(childScript);
-  const runnerScript = path.join(dir, 'runner.mjs');
-  const distPath = JSON.stringify(
-    path.join(process.cwd(), 'dist', 'main.mjs')
-  );
-  const childPath = JSON.stringify(childScript);
-
-  fs.writeFileSync(
-    runnerScript,
-    `import { x } from ${distPath}\n${runnerBody.replace(/CHILD_SCRIPT/g, childPath)}`
-  );
-
+// Tests run in a subprocess because the grandchild process spawned by the
+// fixture script stays alive for 30s and would block vitest's teardown.
+// Grandchildren are tagged with TINYEXEC_TEST_GRANDCHILD=1 for cleanup.
+function killTestGrandchildren(): void {
   try {
-    const proc = spawnSync('node', [runnerScript], {
-      timeout: 10000,
-      encoding: 'utf8',
-      killSignal: 'SIGKILL'
-    });
-
-    return {
-      status: proc.status,
-      signal: proc.signal,
-      stdout: proc.stdout ?? ''
-    };
-  } finally {
-    try {
-      spawnSync('pkill', ['-f', dir]);
-    } catch {}
-    fs.rmSync(dir, {recursive: true, force: true});
-  }
+    spawnSync('pkill', ['-f', 'tinyexec-test-grandchild']);
+  } catch {}
 }
 
 describe.skipIf(isWindows)('exec (grandchild pipe inheritance)', () => {
@@ -47,86 +21,79 @@ describe.skipIf(isWindows)('exec (grandchild pipe inheritance)', () => {
     const dir = fs.mkdtempSync(
       path.join(os.tmpdir(), 'tinyexec-grandchild-')
     );
-    const childScript = path.join(dir, 'child.mjs');
+    const runnerScript = path.join(dir, 'runner.mjs');
+    const distPath = JSON.stringify(
+      path.join(process.cwd(), 'dist', 'main.mjs')
+    );
+    const fixturePath = JSON.stringify(
+      path.join(fixturesDir, 'grandchild.mjs')
+    );
 
     fs.writeFileSync(
-      childScript,
-      `import { spawn } from 'node:child_process'
-console.log('output')
-spawn('node', ['-e', 'setTimeout(() => void 0, 30000)'], {
-  stdio: ['ignore', 1, 'ignore'],
-})
-process.exit(0)
+      runnerScript,
+      `import { x } from ${distPath}
+const result = await x('node', [${fixturePath}])
+process.stdout.write(JSON.stringify({ stdout: result.stdout, exitCode: result.exitCode }))
 `
     );
 
-    const result = runInSubprocess(
-      childScript,
-      `
-const result = await Promise.race([
-  x('node', [CHILD_SCRIPT]).then(() => 'completed'),
-  new Promise((resolve) => setTimeout(() => resolve('hung'), 5000)),
-])
-process.stdout.write(result)
-process.exit(result === 'completed' ? 0 : 1)
-`
-    );
+    try {
+      const proc = spawnSync('node', [runnerScript], {
+        timeout: 10000,
+        encoding: 'utf8',
+        killSignal: 'SIGKILL',
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
 
-    if (result.signal === 'SIGKILL') {
-      expect.unreachable(
-        'exec hung for 10s (grandchild held pipe open)'
-      );
+      expect(proc.signal).not.toBe('SIGKILL');
+      expect(proc.status).toBe(0);
+      const parsed = JSON.parse(proc.stdout.trim());
+      expect(parsed.exitCode).toBe(0);
+      expect(parsed.stdout).toBe('output\n');
+    } finally {
+      killTestGrandchildren();
+      fs.rmSync(dir, {recursive: true, force: true});
     }
-
-    expect(result.status).toBe(0);
-    expect(result.stdout.trim()).toBe('completed');
   });
 
   test('async iterator completes when grandchild holds piped stdout open', async () => {
     const dir = fs.mkdtempSync(
       path.join(os.tmpdir(), 'tinyexec-grandchild-')
     );
-    const childScript = path.join(dir, 'child.mjs');
+    const runnerScript = path.join(dir, 'runner.mjs');
+    const distPath = JSON.stringify(
+      path.join(process.cwd(), 'dist', 'main.mjs')
+    );
+    const fixturePath = JSON.stringify(
+      path.join(fixturesDir, 'grandchild_multiline.mjs')
+    );
 
     fs.writeFileSync(
-      childScript,
-      `import { spawn } from 'node:child_process'
-console.log('line1')
-console.log('line2')
-spawn('node', ['-e', 'setTimeout(() => void 0, 30000)'], {
-  stdio: ['ignore', 1, 'ignore'],
-})
-process.exit(0)
-`
-    );
-
-    const result = runInSubprocess(
-      childScript,
-      `
+      runnerScript,
+      `import { x } from ${distPath}
 const lines = []
-const result = await Promise.race([
-  (async () => {
-    for await (const line of x('node', [CHILD_SCRIPT])) {
-      lines.push(line)
-    }
-    return 'completed'
-  })(),
-  new Promise((resolve) => setTimeout(() => resolve('hung'), 5000)),
-])
-process.stdout.write(JSON.stringify({ result, lines }))
-process.exit(result === 'completed' ? 0 : 1)
+for await (const line of x('node', [${fixturePath}])) {
+  lines.push(line)
+}
+process.stdout.write(JSON.stringify(lines))
 `
     );
 
-    if (result.signal === 'SIGKILL') {
-      expect.unreachable(
-        'async iterator hung for 10s (grandchild held pipe open)'
-      );
-    }
+    try {
+      const proc = spawnSync('node', [runnerScript], {
+        timeout: 10000,
+        encoding: 'utf8',
+        killSignal: 'SIGKILL',
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
 
-    expect(result.status).toBe(0);
-    const parsed = JSON.parse(result.stdout.trim());
-    expect(parsed.result).toBe('completed');
-    expect(parsed.lines).toEqual(['line1', 'line2']);
+      expect(proc.signal).not.toBe('SIGKILL');
+      expect(proc.status).toBe(0);
+      const parsed = JSON.parse(proc.stdout.trim());
+      expect(parsed).toEqual(['line1', 'line2']);
+    } finally {
+      killTestGrandchildren();
+      fs.rmSync(dir, {recursive: true, force: true});
+    }
   });
 });
