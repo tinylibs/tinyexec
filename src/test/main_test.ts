@@ -6,8 +6,6 @@ import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 
 const isWindows = os.platform() === 'win32';
-const fixturesDir = path.join(import.meta.dirname, '../../test/fixtures');
-const distDir = path.join(import.meta.dirname, '../../dist');
 
 const variants = [
   {name: 'async', x, isAsync: true},
@@ -368,79 +366,44 @@ if (!isWindows) {
     });
 
     test('resolves when grandchild holds piped stdout open', async () => {
-      const dir = fs.mkdtempSync(
-        path.join(os.tmpdir(), 'tinyexec-grandchild-')
-      );
-      const runnerScript = path.join(dir, 'runner.mjs');
-      const distPath = JSON.stringify(path.join(distDir, 'main.mjs'));
-      const fixturePath = JSON.stringify(
-        path.join(fixturesDir, 'grandchild.mjs')
-      );
-
-      fs.writeFileSync(
-        runnerScript,
-        `import { x } from ${distPath}
-  const result = await x('node', [${fixturePath}])
-  process.stdout.write(JSON.stringify({ stdout: result.stdout, exitCode: result.exitCode }))
-  `
-      );
-
-      try {
-        const proc = spawnSync('node', [runnerScript], {
-          timeout: 10000,
+      const proc = spawnSync(
+        'node',
+        ['test/fixtures/spawn_grandchild.mjs', 'grandchild.mjs'],
+        {
+          timeout: 3_000,
           encoding: 'utf8',
           killSignal: 'SIGKILL',
           stdio: ['pipe', 'pipe', 'pipe']
-        });
+        }
+      );
 
-        expect(proc.signal).not.toBe('SIGKILL');
-        expect(proc.status).toBe(0);
-        const parsed = JSON.parse(proc.stdout.trim());
-        expect(parsed.exitCode).toBe(0);
-        expect(parsed.stdout).toBe('output\n');
-      } finally {
-        spawnSync('pkill', ['-f', 'tinyexec-test-grandchild']);
-        fs.rmSync(dir, {recursive: true, force: true});
-      }
+      expect(proc.signal).not.toBe('SIGKILL');
+      expect(proc.status).toBe(0);
+      const parsed = JSON.parse(proc.stdout.trim());
+      expect(parsed.exitCode).toBe(0);
+      expect(parsed.stdout).toBe('line1\nline2\n');
+
+      spawnSync('pkill', ['-f', 'grandchild.mjs']);
     });
 
     test('iterator completes when grandchild holds piped stdout open', async () => {
-      const dir = fs.mkdtempSync(
-        path.join(os.tmpdir(), 'tinyexec-grandchild-')
-      );
-      const runnerScript = path.join(dir, 'runner.mjs');
-      const distPath = JSON.stringify(path.join(distDir, 'main.mjs'));
-      const fixturePath = JSON.stringify(
-        path.join(fixturesDir, 'grandchild_multiline.mjs')
-      );
-
-      fs.writeFileSync(
-        runnerScript,
-        `import { x } from ${distPath}
-  const lines = []
-  for await (const line of x('node', [${fixturePath}])) {
-    lines.push(line)
-  }
-  process.stdout.write(JSON.stringify(lines))
-  `
-      );
-
-      try {
-        const proc = spawnSync('node', [runnerScript], {
-          timeout: 10000,
+      const proc = spawnSync(
+        'node',
+        ['test/fixtures/spawn_grandchild_iterator.mjs'],
+        {
+          timeout: 3_000,
           encoding: 'utf8',
           killSignal: 'SIGKILL',
           stdio: ['pipe', 'pipe', 'pipe']
-        });
+        }
+      );
 
-        expect(proc.signal).not.toBe('SIGKILL');
-        expect(proc.status).toBe(0);
-        const parsed = JSON.parse(proc.stdout.trim());
-        expect(parsed).toEqual(['line1', 'line2']);
-      } finally {
-        spawnSync('pkill', ['-f', 'tinyexec-test-grandchild']);
-        fs.rmSync(dir, {recursive: true, force: true});
-      }
+      expect(proc.signal).not.toBe('SIGKILL');
+      expect(proc.status).toBe(0);
+      const parsed = JSON.parse(proc.stdout.trim());
+      expect(parsed).toEqual(['line1', 'line2']);
+
+      spawnSync('pkill', ['-f', 'grandchild.mjs']);
     });
   });
 
