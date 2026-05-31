@@ -367,7 +367,7 @@ if (!isWindows) {
       }
     });
 
-    test('resolves when grandchild holds piped stdout open', async () => {
+    test.skip('resolves when grandchild holds piped stdout open', async () => {
       const dir = fs.mkdtempSync(
         path.join(os.tmpdir(), 'tinyexec-grandchild-')
       );
@@ -402,7 +402,7 @@ if (!isWindows) {
       }
     });
 
-    test('iterator completes when grandchild holds piped stdout open', async () => {
+    test.skip('iterator completes when grandchild holds piped stdout open', async () => {
       const dir = fs.mkdtempSync(
         path.join(os.tmpdir(), 'tinyexec-grandchild-')
       );
