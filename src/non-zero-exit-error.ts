@@ -3,6 +3,10 @@ import type {Output, CommonOutputApi} from './main.js';
 export class NonZeroExitError extends Error {
   public readonly exitCode: number;
 
+  public get signalCode(): string | null {
+    return this.result.signalCode;
+  }
+
   public constructor(
     public readonly result: CommonOutputApi,
     public readonly output?: Output,
@@ -22,7 +26,11 @@ export class NonZeroExitError extends Error {
     // we default to 1 in case.
     const exitCode = result.exitCode ?? 1;
 
-    super(`${target} exited with a non-zero status (${exitCode})`);
+    super(
+      result.signalCode != null
+        ? `${target} was killed with signal ${result.signalCode}`
+        : `${target} exited with a non-zero status (${exitCode})`
+    );
     this.exitCode = exitCode;
 
     // `result` is usually passed the entire instance of the exec process

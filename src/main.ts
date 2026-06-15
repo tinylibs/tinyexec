@@ -32,6 +32,7 @@ export interface CommonOutputApi {
   get pid(): number | undefined;
   get killed(): boolean;
   get exitCode(): number | undefined;
+  get signalCode(): string | null;
 }
 
 export interface OutputApi extends AsyncIterable<string>, CommonOutputApi {
@@ -149,6 +150,10 @@ export class ExecProcess implements Result {
     return undefined;
   }
 
+  public get signalCode(): string | null {
+    return this._process?.signalCode ?? null;
+  }
+
   public constructor(
     command: string,
     args?: readonly string[],
@@ -224,8 +229,8 @@ export class ExecProcess implements Result {
 
     if (
       this._options?.throwOnError &&
-      this.exitCode !== 0 &&
-      this.exitCode !== undefined
+      ((this.exitCode !== 0 && this.exitCode !== undefined) ||
+        this.signalCode != null)
     ) {
       throw new NonZeroExitError(this, undefined, this._command, this._args);
     }
@@ -265,8 +270,8 @@ export class ExecProcess implements Result {
 
     if (
       this._options.throwOnError &&
-      this.exitCode !== 0 &&
-      this.exitCode !== undefined
+      ((this.exitCode !== 0 && this.exitCode !== undefined) ||
+        this.signalCode != null)
     ) {
       throw new NonZeroExitError(this, result, this._command, this._args);
     }
@@ -406,13 +411,17 @@ export function xSync(
   const stdout = spawnResult.stdout?.toString() ?? '';
   const stderr = spawnResult.stderr?.toString() ?? '';
   const exitCode = spawnResult.status ?? undefined;
-  const killed = spawnResult.signal != null;
+  const signalCode = spawnResult.signal ?? null;
+  const killed = signalCode != null;
 
   const result: SyncResult = {
     stdout,
     stderr,
     get exitCode() {
       return exitCode;
+    },
+    get signalCode() {
+      return signalCode;
     },
     get pid() {
       return spawnResult.pid;
@@ -430,7 +439,10 @@ export function xSync(
     }
   };
 
-  if (opts.throwOnError && exitCode !== 0 && exitCode !== undefined) {
+  if (
+    opts.throwOnError &&
+    ((exitCode !== 0 && exitCode !== undefined) || signalCode != null)
+  ) {
     throw new NonZeroExitError(
       result,
       {

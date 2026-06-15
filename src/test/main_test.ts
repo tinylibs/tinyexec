@@ -95,6 +95,36 @@ describe('exec (async)', () => {
     expect(proc.exitCode).toBe(1);
   });
 
+  test('throws when throwOnError=true and process is killed by signal', async () => {
+    const proc = x(
+      'node',
+      ['-e', 'process.kill(process.pid, "SIGTERM")'],
+      {throwOnError: true}
+    );
+    try {
+      await proc;
+      expect.fail('Expected to throw');
+    } catch (err) {
+      expect.assert(err instanceof NonZeroExitError);
+      expect(err.signalCode).toBe('SIGTERM');
+    }
+    expect(proc.exitCode).toBeUndefined();
+    expect(proc.signalCode).toBe('SIGTERM');
+  });
+
+  test('async iterator throws when throwOnError=true and process is killed by signal', async () => {
+    const proc = x(
+      'node',
+      ['-e', 'process.kill(process.pid, "SIGTERM")'],
+      {throwOnError: true}
+    );
+    await expect(async () => {
+      for await (const _line of proc) {
+        // consume iterator
+      }
+    }).rejects.toThrow(NonZeroExitError);
+  });
+
   test('supports stdin passed as a string', async () => {
     let result = await x('node', ['-e', 'process.stdin.pipe(process.stdout)'], {
       stdin: 'foo\nbar'
@@ -159,6 +189,14 @@ describe('exec (sync)', () => {
         'The command `node -e "process.exit(1);"` exited with a non-zero status (1)'
       );
     }
+  });
+
+  test('throws when throwOnError=true and process is killed by signal', () => {
+    expect(() => {
+      xSync('node', ['-e', 'process.kill(process.pid, "SIGTERM")'], {
+        throwOnError: true
+      });
+    }).toThrow(NonZeroExitError);
   });
 });
 
