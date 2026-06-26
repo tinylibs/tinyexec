@@ -5,13 +5,4 @@ export default defineConfig({
   target: 'es2022',
   clean: true,
   dts: true,
-  outputOptions: {
-    minify: {
-      mangle: true,
-      compress: false,
-      codegen: {
-        removeWhitespace: false
-      }
-    }
-  }
 });
