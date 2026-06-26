@@ -17,17 +17,17 @@ export class NonZeroExitError extends Error {
       target = `The command \`${fullCommand}\``;
     }
 
-    // This error is normally only created when the exit code is non-zero, so it
-    // must exist here. However, due to types compatibility, we accept it being
-    // nullable and default to 1 in case.
+    // This error is normally only created when the exit code is non-nullable
+    // and non-zero, so it must exist here. However, due to types compatibility,
+    // we default to 1 in case.
     const exitCode = result.exitCode ?? 1;
 
     super(`${target} exited with a non-zero status (${exitCode})`);
     this.exitCode = exitCode;
 
-    // `result` is sometimes passed the entire child process object, which
-    // results in very large logs as it used to be typed `Result`. However,
-    // we don't manually subset it for now to keep compatibility.
+    // `result` is usually passed the entire instance of the exec process
+    // depending on the exec API so that handlers can interact with it fully.
+    // As such, its log can be very large so we hide it by making it non-enumerable.
     Object.defineProperty(this, 'result', {
       enumerable: false,
       writable: false,
