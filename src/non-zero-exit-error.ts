@@ -12,7 +12,7 @@ export class NonZeroExitError extends Error {
     let target = 'The process';
     if (command) {
       const fullCommand = args?.length
-        ? `${command} ${args.map((a) => (a.includes(' ') ? JSON.stringify(a) : a)).join(' ')}`
+        ? `${command} ${args.map((a) => (/[ "'`()]/.test(a) ? JSON.stringify(a) : a)).join(' ')}`
         : command;
       target = `The command \`${fullCommand}\``;
     }

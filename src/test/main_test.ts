@@ -68,7 +68,7 @@ describe('exec (async)', () => {
       expect.assert(err instanceof NonZeroExitError);
       expect(err.exitCode).toBe(1);
       expect(err.message).toBe(
-        'The command `node -e process.exit(1);` exited with a non-zero status (1)'
+        'The command `node -e "process.exit(1);"` exited with a non-zero status (1)'
       );
     }
     expect(proc.exitCode).toBe(1);
@@ -88,7 +88,7 @@ describe('exec (async)', () => {
       expect.assert(err instanceof NonZeroExitError);
       expect(err.exitCode).toBe(1);
       expect(err.message).toBe(
-        'The command `node -e process.exit(1);` exited with a non-zero status (1)'
+        'The command `node -e "console.log(\'foo\'); process.exit(1);"` exited with a non-zero status (1)'
       );
     }
     expect(lines).toEqual(['foo']);
@@ -156,7 +156,7 @@ describe('exec (sync)', () => {
     } catch (err) {
       expect(err instanceof NonZeroExitError).ok;
       expect((err as NonZeroExitError).message).toBe(
-        '`node -e process.exit(1);` exited with a non-zero status (1)'
+        'The command `node -e "process.exit(1);"` exited with a non-zero status (1)'
       );
     }
   });
