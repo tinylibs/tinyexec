@@ -61,9 +61,16 @@ describe.each(variants)('exec ($name)', ({x, isAsync}) => {
 describe('exec (async)', () => {
   test('non-zero exitCode throws when throwOnError=true', async () => {
     const proc = x('node', ['-e', 'process.exit(1);'], {throwOnError: true});
-    await expect(async () => {
+    try {
       await proc;
-    }).rejects.toThrow(NonZeroExitError);
+      expect.fail('Expected to throw');
+    } catch (err) {
+      expect.assert(err instanceof NonZeroExitError);
+      expect(err.exitCode).toBe(1);
+      expect(err.message).toBe(
+        'The command `node -e process.exit(1);` exited with a non-zero status (1)'
+      );
+    }
     expect(proc.exitCode).toBe(1);
   });
 
@@ -72,11 +79,18 @@ describe('exec (async)', () => {
       throwOnError: true
     });
     const lines: string[] = [];
-    await expect(async () => {
+    try {
       for await (const line of proc) {
         lines.push(line);
       }
-    }).rejects.toThrow(NonZeroExitError);
+      expect.fail('Expected to throw');
+    } catch (err) {
+      expect.assert(err instanceof NonZeroExitError);
+      expect(err.exitCode).toBe(1);
+      expect(err.message).toBe(
+        'The command `node -e process.exit(1);` exited with a non-zero status (1)'
+      );
+    }
     expect(lines).toEqual(['foo']);
     expect(proc.exitCode).toBe(1);
   });
@@ -136,9 +150,15 @@ describe('exec (async)', () => {
 
 describe('exec (sync)', () => {
   test('non-zero exitCode throws when throwOnError=true', () => {
-    expect(() => {
+    try {
       xSync('node', ['-e', 'process.exit(1);'], {throwOnError: true});
-    }).toThrow(NonZeroExitError);
+      expect.fail('Expected to throw');
+    } catch (err) {
+      expect(err instanceof NonZeroExitError).ok;
+      expect((err as NonZeroExitError).message).toBe(
+        '`node -e process.exit(1);` exited with a non-zero status (1)'
+      );
+    }
   });
 });
 
@@ -171,12 +191,12 @@ if (isWindows) {
         await proc;
         expect.fail('Expected to throw');
       } catch (err) {
-        expect(err instanceof NonZeroExitError).ok;
-        expect((err as NonZeroExitError).output?.stderr).toBe(
+        expect.assert(err instanceof NonZeroExitError);
+        expect(err.output?.stderr).toBe(
           "'definitelyNonExistent' is not recognized as an internal" +
             ' or external command,\r\noperable program or batch file.\r\n'
         );
-        expect((err as NonZeroExitError).output?.stdout).toBe('');
+        expect(err.output?.stdout).toBe('');
       }
     });
 

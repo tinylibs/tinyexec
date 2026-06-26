@@ -227,7 +227,7 @@ export class ExecProcess implements Result {
       this.exitCode !== 0 &&
       this.exitCode !== undefined
     ) {
-      throw new NonZeroExitError(this);
+      throw new NonZeroExitError(this, undefined, this._command, this._args);
     }
   }
 
@@ -268,7 +268,7 @@ export class ExecProcess implements Result {
       this.exitCode !== 0 &&
       this.exitCode !== undefined
     ) {
-      throw new NonZeroExitError(this, result);
+      throw new NonZeroExitError(this, result, this._command, this._args);
     }
 
     return result;
@@ -431,7 +431,16 @@ export function xSync(
   };
 
   if (opts.throwOnError && exitCode !== 0 && exitCode !== undefined) {
-    throw new NonZeroExitError(result, result);
+    throw new NonZeroExitError(
+      result,
+      {
+        stdout: result.stdout,
+        stderr: result.stderr,
+        exitCode: result.exitCode
+      },
+      command,
+      args
+    );
   }
 
   return result;
