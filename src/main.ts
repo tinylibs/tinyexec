@@ -230,7 +230,7 @@ export class ExecProcess implements Result {
     if (
       this._options?.throwOnError &&
       ((this.exitCode !== 0 && this.exitCode !== undefined) ||
-        this.signalCode != null)
+        this.signalCode !== null)
     ) {
       throw new NonZeroExitError(this, undefined, this._command, this._args);
     }
@@ -271,7 +271,7 @@ export class ExecProcess implements Result {
     if (
       this._options.throwOnError &&
       ((this.exitCode !== 0 && this.exitCode !== undefined) ||
-        this.signalCode != null)
+        this.signalCode !== null)
     ) {
       throw new NonZeroExitError(this, result, this._command, this._args);
     }
@@ -412,7 +412,7 @@ export function xSync(
   const stderr = spawnResult.stderr?.toString() ?? '';
   const exitCode = spawnResult.status ?? undefined;
   const signalCode = spawnResult.signal ?? null;
-  const killed = signalCode != null;
+  const killed = signalCode !== null;
 
   const result: SyncResult = {
     stdout,
@@ -441,7 +441,7 @@ export function xSync(
 
   if (
     opts.throwOnError &&
-    ((exitCode !== 0 && exitCode !== undefined) || signalCode != null)
+    ((exitCode !== 0 && exitCode !== undefined) || signalCode !== null)
   ) {
     throw new NonZeroExitError(
       result,

@@ -27,8 +27,8 @@ export class NonZeroExitError extends Error {
     const exitCode = result.exitCode ?? 1;
 
     super(
-      result.signalCode != null
-        ? `${target} was killed with signal ${result.signalCode}`
+      result.signalCode !== null
+        ? `${target} was killed by the signal ${result.signalCode}`
         : `${target} exited with a non-zero status (${exitCode})`
     );
     this.exitCode = exitCode;
