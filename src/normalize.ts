@@ -16,6 +16,7 @@ const isWindowsExecutableRegExp = /\.(?:com|exe)$/i;
 const isNodeModulesCmdRegExp = /node_modules[\\/]\.bin[\\/][^\\/]+\.cmd$/i;
 const isWindows = process.platform === 'win32';
 const defaultPathExt = ['.EXE', '.CMD', '.BAT', '.COM'];
+const noPathExt = [''];
 
 interface NormalizedSpawnCommand {
   command: string;
@@ -148,30 +149,31 @@ function resolveCommand(command: string, options: SpawnOptions): string | null {
     command.includes('/') || command.includes('\\')
       ? ['']
       : [cwd, ...PATH.split(pathDelimiter)];
-  const pathExt = env.PATHEXT
-    ? env.PATHEXT.split(pathDelimiter)
-    : defaultPathExt;
+  let pathExt = env.PATHEXT ? env.PATHEXT.split(pathDelimiter) : defaultPathExt;
 
   if (command.includes('.') && pathExt[0] !== '') {
-    pathExt.unshift('');
+    pathExt = ['', ...pathExt];
   }
 
-  for (const path of pathEnv) {
-    const unquoted =
-      path.startsWith('"') && path.endsWith('"') && path.length > 1
-        ? path.slice(1, -1)
-        : path;
-    const dest = resolvePath(cwd, unquoted, command);
+  // The second pass tries to resolve the command with no extension
+  for (const extensions of [pathExt, noPathExt]) {
+    for (const path of pathEnv) {
+      const unquoted =
+        path.startsWith('"') && path.endsWith('"') && path.length > 1
+          ? path.slice(1, -1)
+          : path;
+      const dest = resolvePath(cwd, unquoted, command);
 
-    for (const ext of pathExt) {
-      const destWithExt = dest + ext;
+      for (const ext of extensions) {
+        const destWithExt = dest + ext;
 
-      try {
-        if (statSync(destWithExt).isFile()) {
-          return destWithExt;
+        try {
+          if (statSync(destWithExt).isFile()) {
+            return destWithExt;
+          }
+        } catch {
+          // do nothing, it didn't exist
         }
-      } catch {
-        // do nothing, it didn't exist
       }
     }
   }

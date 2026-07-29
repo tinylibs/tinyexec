@@ -71,6 +71,14 @@ describe('normalizeSpawnCommand', () => {
       expect(normalized.args).toEqual([scriptPath]);
     });
 
+    test('detects shebang of a command without extension', () => {
+      const scriptPath = path.join(fixturesPath, 'shebang_script_noext');
+      const normalized = normalizeSpawnCommand(scriptPath, []);
+
+      expect(normalized.command).toBe('where');
+      expect(normalized.args).toEqual([scriptPath]);
+    });
+
     test('handles relative commands without extension', () => {
       const relativePath = path.relative(
         cwd,
