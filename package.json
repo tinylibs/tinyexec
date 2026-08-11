@@ -46,7 +46,7 @@
     "prettier": "^3.9.6",
     "publint": "^0.3.23",
     "tsdown": "^0.22.14",
-    "typescript": "^7.0.2",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
     "typescript-eslint": "^8.66.0",
     "vitest": "^4.0.7"
   },
