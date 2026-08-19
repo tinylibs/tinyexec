@@ -290,12 +290,12 @@ export class ExecProcess implements Result {
   protected _streamErr?: Readable;
 
   public spawn(): void {
-    const cwd = getCwd();
     const options = this._options;
     const nodeOptions = {
       ...defaultNodeOptions,
       ...options.nodeOptions
     };
+    const cwd = nodeOptions?.cwd ?? getCwd();
     const signals: AbortSignal[] = [];
 
     this._resetState();
@@ -384,11 +384,11 @@ export function xSync(
   options?: Partial<SyncOptions>
 ): SyncResult {
   const opts = {...defaultSyncOptions, ...options};
-  const cwd = getCwd();
   const nodeOptions: SpawnSyncOptions = {
     windowsHide: true,
     ...opts.nodeOptions
   };
+  const cwd = nodeOptions?.cwd ?? getCwd();
 
   if (opts.timeout !== undefined) {
     nodeOptions.timeout = opts.timeout;
