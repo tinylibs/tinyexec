@@ -4,6 +4,7 @@ import os from 'node:os';
 import fs from 'node:fs';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
+import {pathToFileURL} from 'node:url';
 
 const isWindows = os.platform() === 'win32';
 const fixturesDir = path.join(import.meta.dirname, '../../test/fixtures');
@@ -14,7 +15,7 @@ const variants = [
   {name: 'sync', x: xSync, isAsync: false}
 ];
 
-describe.each(variants)('exec ($name)', ({x, isAsync}) => {
+describe.for(variants)('exec ($name)', ({x, isAsync}) => {
   test('pid is number', async () => {
     const proc = x('echo', ['foo']);
     await proc;
@@ -55,6 +56,47 @@ describe.each(variants)('exec ($name)', ({x, isAsync}) => {
     const result = await x('node', ['-e', "console.error('some error')"]);
     expect(result.stderr).toBe('some error\n');
     expect(result.stdout).toBe('');
+  });
+
+  test('node_modules/.bin is added to path as resolved from cwd', async () => {
+    const result = await x('node', ['-e', 'console.log(process.env.PATH)']);
+    expect(result.stdout).toMatch(
+      path.join(process.cwd(), 'node_modules', '.bin')
+    );
+  });
+
+  test('node_modules/.bin is added to path resolved from nodeOptions.cwd', async () => {
+    const result = await x('node', ['-e', 'console.log(process.env.PATH)'], {
+      nodeOptions: {cwd: fixturesDir}
+    });
+
+    // Adds ./node_modules/.bin relative to nodeOptions.cwd
+    expect(result.stdout).toMatch(
+      path.join(fixturesDir, 'node_modules', '.bin')
+    );
+
+    // Also adds from root of repository, two directories up from fixtures
+    const repoRootDir = path.join(fixturesDir, '../../');
+    expect(result.stdout).toMatch(
+      path.join(repoRootDir, 'node_modules', '.bin')
+    );
+  });
+
+  test('supports file URL as nodeOptions.cwd', async () => {
+    const result = await x('node', ['-e', 'console.log(process.env.PATH)'], {
+      nodeOptions: {cwd: pathToFileURL(fixturesDir)}
+    });
+
+    // Adds ./node_modules/.bin relative to nodeOptions.cwd
+    expect(result.stdout).toMatch(
+      path.join(fixturesDir, 'node_modules', '.bin')
+    );
+
+    // Also adds from root of repository, two directories up from fixtures
+    const repoRootDir = path.join(fixturesDir, '../../');
+    expect(result.stdout).toMatch(
+      path.join(repoRootDir, 'node_modules', '.bin')
+    );
   });
 });
 

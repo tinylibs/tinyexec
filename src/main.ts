@@ -78,18 +78,18 @@ export interface TinyExec {
   ): Result;
 }
 
-const defaultOptions: Partial<Options> = {
+const defaultOptions = {
   timeout: undefined,
   persist: false
-};
+} satisfies Partial<Options>;
 
-const defaultSyncOptions: Partial<SyncOptions> = {
+const defaultSyncOptions = {
   timeout: undefined
-};
+} satisfies Partial<SyncOptions>;
 
-const defaultNodeOptions: SpawnOptions = {
+const defaultNodeOptions = {
   windowsHide: true
-};
+} satisfies SpawnOptions;
 
 function combineSignals(signals: Iterable<AbortSignal>): AbortSignal {
   const controller = new AbortController();
@@ -290,12 +290,12 @@ export class ExecProcess implements Result {
   protected _streamErr?: Readable;
 
   public spawn(): void {
-    const cwd = getCwd();
     const options = this._options;
     const nodeOptions = {
       ...defaultNodeOptions,
       ...options.nodeOptions
-    };
+    } satisfies SpawnOptions;
+    const cwd = nodeOptions?.cwd ?? getCwd();
     const signals: AbortSignal[] = [];
 
     this._resetState();
@@ -384,11 +384,11 @@ export function xSync(
   options?: Partial<SyncOptions>
 ): SyncResult {
   const opts = {...defaultSyncOptions, ...options};
-  const cwd = getCwd();
-  const nodeOptions: SpawnSyncOptions = {
-    windowsHide: true,
+  const nodeOptions = {
+    ...defaultNodeOptions,
     ...opts.nodeOptions
-  };
+  } satisfies SpawnSyncOptions;
+  const cwd = nodeOptions?.cwd ?? getCwd();
 
   if (opts.timeout !== undefined) {
     nodeOptions.timeout = opts.timeout;

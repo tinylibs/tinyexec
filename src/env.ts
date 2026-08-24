@@ -3,6 +3,7 @@ import {
   resolve as resolvePath,
   dirname
 } from 'node:path';
+import {fileURLToPath} from 'node:url';
 
 export type EnvLike = (typeof process)['env'];
 
@@ -34,11 +35,12 @@ export function getPathFromEnv(env: EnvLike): EnvPathInfo {
   return defaultEnvPathInfo;
 }
 
-function addNodeBinToPath(cwd: string, path: EnvPathInfo): EnvPathInfo {
+function addNodeBinToPath(cwd: URL | string, path: EnvPathInfo): EnvPathInfo {
   const parts = path.value.split(pathDelimiter);
   const nodeBinPaths: string[] = [];
 
-  let currentPath = cwd;
+  let currentPath =
+    typeof cwd === 'string' ? cwd : fileURLToPath(cwd, {windows: false});
   let lastPath: string;
 
   do {
@@ -55,7 +57,7 @@ function addNodeBinToPath(cwd: string, path: EnvPathInfo): EnvPathInfo {
 }
 
 export function computeEnv(
-  cwd: string,
+  cwd: URL | string,
   env?: EnvLike,
   nodePath: boolean = true
 ): EnvLike {

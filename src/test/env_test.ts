@@ -123,4 +123,24 @@ describe('computeEnv', async () => {
     expect(env[pathKey]).toBe(expected);
     expect(explicit[pathKey]).toBe(expected);
   });
+
+  test('supports file URL for cwd', () => {
+    const cwd = new URL('file:///one/two/three');
+    const originalPath = path.join(pathSep, 'usr', 'local', 'bin');
+
+    const env = computeEnv(cwd, {
+      PATH: originalPath
+    });
+
+    const expected = [
+      path.resolve(pathSep, 'one', 'two', 'three', 'node_modules', '.bin'),
+      path.resolve(pathSep, 'one', 'two', 'node_modules', '.bin'),
+      path.resolve(pathSep, 'one', 'node_modules', '.bin'),
+      path.resolve(pathSep, 'node_modules', '.bin'),
+      path.dirname(process.execPath),
+      originalPath
+    ].join(pathDelimiter);
+
+    expect(env[pathKey]).toBe(expected);
+  });
 });
