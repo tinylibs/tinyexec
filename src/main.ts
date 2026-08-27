@@ -12,6 +12,7 @@ import {combineStreams} from './stream.js';
 import readline from 'node:readline';
 import {normalizeSpawnCommand} from './normalize.js';
 import {NonZeroExitError} from './non-zero-exit-error.js';
+import {createKillFunction, detachProcessGroup} from './kill-descendants.js';
 
 export {NonZeroExitError, normalizeSpawnCommand};
 
@@ -64,6 +65,7 @@ export interface Options extends CommonOptions {
   nodeOptions: SpawnOptions;
   persist: boolean;
   stdin: Result | ExecProcess | string;
+  killDescendants: boolean;
 }
 
 export interface SyncOptions extends CommonOptions {
@@ -80,7 +82,8 @@ export interface TinyExec {
 
 const defaultOptions = {
   timeout: undefined,
-  persist: false
+  persist: false,
+  killDescendants: false
 } satisfies Partial<Options>;
 
 const defaultSyncOptions = {
@@ -128,6 +131,7 @@ async function readStream(stream: Readable): Promise<string> {
 export class ExecProcess implements Result {
   protected _process?: ChildProcess;
   protected _aborted: boolean = false;
+  protected _killed: boolean = false;
   protected _options: Partial<Options>;
   protected _command: string;
   protected _args: readonly string[];
@@ -179,7 +183,7 @@ export class ExecProcess implements Result {
   }
 
   public get killed(): boolean {
-    return this._process?.killed === true;
+    return this._killed || this._process?.killed === true;
   }
 
   public pipe(
@@ -318,10 +322,11 @@ export class ExecProcess implements Result {
 
     nodeOptions.env = computeEnv(cwd, nodeOptions.env, options.nodePath);
 
+    const killDescendants = options.killDescendants === true;
     const crossResult = normalizeSpawnCommand(
       this._command,
       this._args,
-      nodeOptions
+      killDescendants ? detachProcessGroup(nodeOptions) : nodeOptions
     );
 
     const handle = spawn(
@@ -329,6 +334,20 @@ export class ExecProcess implements Result {
       crossResult.args,
       crossResult.options
     );
+
+    if (killDescendants) {
+      // node's timeout and abort handling calls the public kill method
+      const kill = createKillFunction(handle);
+      handle.kill = (signal): boolean => {
+        const killed = kill(signal);
+
+        if (killed) {
+          this._killed = true;
+        }
+
+        return killed;
+      };
+    }
 
     if (handle.stderr) {
       this._streamErr = handle.stderr;
@@ -354,6 +373,7 @@ export class ExecProcess implements Result {
 
   protected _resetState(): void {
     this._aborted = false;
+    this._killed = false;
     this._processClosed = new Promise<void>((resolve) => {
       this._resolveClose = resolve;
     });

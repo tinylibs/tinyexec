@@ -60,6 +60,8 @@ The options object can have the following properties:
 - `signal` - an `AbortSignal` to allow aborting of the execution
 - `timeout` - time in milliseconds at which the process will be forcibly killed
 - `persist` - if `true`, the process will continue after the host exits
+- `killDescendants` - if `true`, terminating the process will also terminate
+  its descendants (defaults to `false`)
 - `stdin` - `string` or another `Result` that will be used as the input to the process
 - `nodeOptions` - any valid options to node's underlying `spawn` function
 - `throwOnError` - if true, non-zero exit codes will throw an error
@@ -110,6 +112,37 @@ proc.kill();
 // or with a signal
 proc.kill('SIGHUP');
 ```
+
+### Killing descendant processes
+
+By default, terminating a process only terminates the direct child. Any
+processes spawned by that child can continue running.
+
+Pass `killDescendants: true` to terminate the process tree when `kill()` is
+called, a timeout expires, or an `AbortSignal` aborts:
+
+```ts
+const proc = x('node', ['./server.mjs'], {
+  killDescendants: true
+});
+
+proc.kill();
+await proc;
+```
+
+On Unix, tinyexec starts the subprocess in its own process group and signals
+that group. On Windows, it uses `taskkill /T /F`. This is best-effort:
+descendants that create their own process group or session are not terminated,
+and Windows falls back to terminating only the direct child if `taskkill`
+cannot be used.
+
+On Unix, this option needs the subprocess to lead its own process group, so it
+implies `detached: true`. This has the same effects as `persist`: the
+subprocess keeps running after the host exits, and terminal signals such as
+`CTRL-C` are not forwarded to it automatically. Any `nodeOptions.detached`
+value you set is overridden.
+
+Like `persist`, this option is not supported by the synchronous API.
 
 ### Node modules/binaries
 
@@ -197,6 +230,7 @@ Since the synchronous API blocks the event loop, there are some features that ar
 
 - `signal`
 - `persist`
+- `killDescendants`
 - `kill()` method
 - `stdin` piping
 - `pipe()` method
