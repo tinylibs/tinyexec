@@ -225,6 +225,17 @@ if (isWindows) {
       );
       expect(result.stdout).toBe('');
     });
+
+    test('double escapes for batch files', async () => {
+      const result = await x(path.join(fixturesDir, 'echo_args.cmd'), [
+        '"&echo INJECTED'
+      ]);
+
+      // the batch file echoes `%*`, so the arg text itself is expected in
+      // stdout. a line of its own means `&` was parsed as a separator
+      expect(result.stdout).toContain('&echo INJECTED');
+      expect(result.stdout.split(/\r?\n/)).not.toContain('INJECTED');
+    });
   });
 
   describe('exec (windows) (async)', () => {

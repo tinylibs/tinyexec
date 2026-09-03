@@ -13,7 +13,7 @@ import {getPathFromEnv} from './env.js';
 const metaCharsRegExp = /([()\][%!^"`<>&|;, *?])/g;
 const shebangRegExp = /^#!\s*(.+)/;
 const isWindowsExecutableRegExp = /\.(?:com|exe)$/i;
-const isNodeModulesCmdRegExp = /node_modules[\\/]\.bin[\\/][^\\/]+\.cmd$/i;
+const isBatchFileRegExp = /\.(?:cmd|bat)$/i;
 const isWindows = process.platform === 'win32';
 const defaultPathExt = ['.EXE', '.CMD', '.BAT', '.COM'];
 const noPathExt = [''];
@@ -84,12 +84,13 @@ export function normalizeSpawnCommand(
 
   // We don't need a shell if the command filename is resolved and an executable
   if (file === null || !isWindowsExecutableRegExp.test(file)) {
-    // Need to double escape meta chars if the command is a cmd-shim located in `node_modules/.bin/`
-    // The cmd-shim simply calls execute the package bin file with NodeJS, proxying any argument
-    // Because the escape of metachars with ^ gets interpreted when the cmd.exe is first called,
-    // we need to double escape them
+    // Meta chars need double escaping if the command is a batch file. cmd.exe
+    // basically consumes the first layer of escaping.
+    // 1. `cmd.exe /c "command.cmd arg1 arg2"`
+    // 2. `command.cmd` sees `arg1` and `arg2` as `%1` and `%2`
+    // 3. `command.cmd` subs those in as actual commands
     const needsDoubleEscapeMetaChars =
-      file !== null && isNodeModulesCmdRegExp.test(file);
+      file !== null && isBatchFileRegExp.test(file);
 
     // Normalize posix paths into OS compatible paths (e.g.: foo/bar -> foo\bar)
     // This is necessary otherwise it will always fail with ENOENT in those cases
