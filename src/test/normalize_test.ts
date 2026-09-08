@@ -79,6 +79,23 @@ describe('normalizeSpawnCommand', () => {
       expect(normalized.args).toEqual([scriptPath]);
     });
 
+    test('double escapes meta chars in args to a batch file', () => {
+      const cmdPath = path.join(fixturesPath, 'echo_args.cmd');
+      const normalized = normalizeSpawnCommand(cmdPath, ['"&injected']);
+
+      // the batch interpreter consumes a second layer of `^` escapes when it
+      // expands `%*`, so `&` must still be escaped at that point
+      expect(normalized.args[3]).toBe(
+        `"${cmdPath} ^^^"\\^^^"^^^&injected^^^""`
+      );
+    });
+
+    test('single escapes meta chars in args to a non-batch command', () => {
+      const normalized = normalizeSpawnCommand('nonexistent', ['"&injected']);
+
+      expect(normalized.args[3]).toBe('"nonexistent ^"\\^"^&injected^""');
+    });
+
     test('handles relative commands without extension', () => {
       const relativePath = path.relative(
         cwd,
