@@ -66,6 +66,32 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run test:unit
 
+  smoke:
+    name: Smoke test on Node.js ${{ matrix.node-version }} @ ${{ matrix.os }}
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version:
+          - 18.0.0
+          - 18.x
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node-version }}
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+      # No `npm ci` on purpose: the smoke test imports `dist/` and node
+      # builtins only. Installing dev dependencies is what made 18.x
+      # unworkable before, so this job never touches them.
+      - run: npm run test:smoke
+
   bun-build:
     name: Build on Bun (latest) @ ubuntu-latest
     runs-on: ubuntu-latest

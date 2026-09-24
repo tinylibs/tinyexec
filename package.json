@@ -19,7 +19,8 @@
     "lint": "tsc --noEmit && eslint src && publint",
     "prepare": "npm run build",
     "test": "npm run build && npm run test:unit",
-    "test:unit": "vitest run"
+    "test:unit": "vitest run",
+    "test:smoke": "node test/smoke.mjs"
   },
   "repository": {
     "type": "git",
