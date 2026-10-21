@@ -14,6 +14,9 @@ export const waitForEvent = (
 export const combineStreams = (streams: Readable[]): Readable => {
   let streamCount = streams.length;
   const combined = new PassThrough();
+  if (streamCount === 0) {
+    combined.end();
+  }
   const maybeEmitEnd = () => {
     if (--streamCount === 0) {
       combined.end();
