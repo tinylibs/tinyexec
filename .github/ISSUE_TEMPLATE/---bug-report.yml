@@ -1,0 +1,17 @@
+name: "\U0001F41E Bug report"
+description: Report an issue or possible bug
+type: bug
+body:
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: Describe the Bug
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction-link-or-steps
+    attributes:
+      label: Reproduction link or steps
+    validations:
+      required: true
