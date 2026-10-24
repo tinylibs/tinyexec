@@ -7,6 +7,7 @@ import {
 } from 'node:child_process';
 import {type Readable} from 'node:stream';
 import {cwd as getCwd} from 'node:process';
+import {StringDecoder} from 'node:string_decoder';
 import {computeEnv} from './env.js';
 import {combineStreams} from './stream.js';
 import readline from 'node:readline';
@@ -113,11 +114,13 @@ function combineSignals(signals: Iterable<AbortSignal>): AbortSignal {
 
 async function readStream(stream: Readable): Promise<string> {
   let output = '';
+  const decoder = new StringDecoder('utf8');
 
   try {
     for await (const chunk of stream) {
-      output += chunk.toString();
+      output += typeof chunk === 'string' ? chunk : decoder.write(chunk);
     }
+    output += decoder.end();
   } catch {
     // suppress errors, child process probably failed to spawn
   }
