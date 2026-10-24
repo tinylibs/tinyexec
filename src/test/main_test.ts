@@ -101,6 +101,24 @@ describe.for(variants)('exec ($name)', ({x, isAsync}) => {
 });
 
 describe('exec (async)', () => {
+  test('preserves multibyte utf8 characters split across stdout chunks', async () => {
+    const proc = x('node', [
+      '-e',
+      "const buf = Buffer.from('ñé€🚀', 'utf8'); process.stdout.write(buf.subarray(0, 3)); process.stdin.once('data', () => { process.stdout.write(buf.subarray(3)); });"
+    ]);
+    const firstChunk = new Promise<void>((resolve) => {
+      proc.process!.stdout!.once('data', () => {
+        resolve();
+      });
+    });
+    const resultPromise = Promise.resolve(proc);
+    await firstChunk;
+    proc.process!.stdin!.write('x');
+    proc.process!.stdin!.end();
+    const result = await resultPromise;
+    expect(result.stdout).toBe('ñé€🚀');
+  });
+
   test('non-zero exitCode throws when throwOnError=true', async () => {
     const proc = x('node', ['-e', 'process.exit(1);'], {throwOnError: true});
     try {
