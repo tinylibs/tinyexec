@@ -101,6 +101,31 @@ describe.for(variants)('exec ($name)', ({x, isAsync}) => {
 });
 
 describe('exec (async)', () => {
+  test.each(['ignore', 'inherit'] as const)(
+    'async iteration completes with stdio=%s',
+    async (stdio) => {
+      const proc = x(process.execPath, ['-e', ''], {
+        nodeOptions: {stdio}
+      });
+      const lines = [];
+      for await (const line of proc) lines.push(line);
+      expect(lines).toEqual([]);
+      expect(proc.exitCode).toBe(0);
+    }
+  );
+
+  test('async iteration reports a nonzero exit without output streams', async () => {
+    const proc = x(process.execPath, ['-e', 'process.exit(1)'], {
+      nodeOptions: {stdio: 'ignore'},
+      throwOnError: true
+    });
+    await expect(async () => {
+      for await (const _line of proc) {
+        // no output streams
+      }
+    }).rejects.toThrow(NonZeroExitError);
+  });
+
   test('non-zero exitCode throws when throwOnError=true', async () => {
     const proc = x('node', ['-e', 'process.exit(1);'], {throwOnError: true});
     try {

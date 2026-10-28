@@ -13,6 +13,14 @@ describe('waitForEvent', async () => {
 });
 
 describe('combineStreams', async () => {
+  test('ends without input streams', async () => {
+    const chunks = [];
+    for await (const chunk of combineStreams([])) {
+      chunks.push(chunk);
+    }
+    expect(chunks).toEqual([]);
+  });
+
   test('works with a single stream', async () => {
     const stream = Readable.from(['foo', 'bar']);
     const combined = combineStreams([stream]);
