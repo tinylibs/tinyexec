@@ -16,6 +16,7 @@ export const combineStreams = (streams: Readable[]): Readable => {
   const combined = new PassThrough();
   if (streamCount === 0) {
     combined.end();
+    return combined;
   }
   const maybeEmitEnd = () => {
     if (--streamCount === 0) {
