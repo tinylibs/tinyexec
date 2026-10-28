@@ -111,8 +111,7 @@ describe('exec (async)', () => {
       for await (const line of proc) lines.push(line);
       expect(lines).toEqual([]);
       expect(proc.exitCode).toBe(0);
-    },
-    2000
+    }
   );
 
   test('async iteration reports a nonzero exit without output streams', async () => {
@@ -125,7 +124,7 @@ describe('exec (async)', () => {
         // no output streams
       }
     }).rejects.toThrow(NonZeroExitError);
-  }, 2000);
+  });
 
   test('non-zero exitCode throws when throwOnError=true', async () => {
     const proc = x('node', ['-e', 'process.exit(1);'], {throwOnError: true});

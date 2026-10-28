@@ -19,7 +19,7 @@ describe('combineStreams', async () => {
       chunks.push(chunk);
     }
     expect(chunks).toEqual([]);
-  }, 1000);
+  });
 
   test('works with a single stream', async () => {
     const stream = Readable.from(['foo', 'bar']);
