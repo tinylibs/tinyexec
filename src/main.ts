@@ -12,6 +12,7 @@ import {combineStreams} from './stream.js';
 import readline from 'node:readline';
 import {normalizeSpawnCommand} from './normalize.js';
 import {NonZeroExitError} from './non-zero-exit-error.js';
+import {StringDecoder} from 'node:string_decoder';
 
 export {NonZeroExitError, normalizeSpawnCommand};
 
@@ -113,11 +114,13 @@ function combineSignals(signals: Iterable<AbortSignal>): AbortSignal {
 
 async function readStream(stream: Readable): Promise<string> {
   let output = '';
+  const decoder = new StringDecoder();
 
   try {
     for await (const chunk of stream) {
-      output += chunk.toString();
+      output += typeof chunk === 'string' ? chunk : decoder.write(chunk);
     }
+    output += decoder.end();
   } catch {
     // suppress errors, child process probably failed to spawn
   }

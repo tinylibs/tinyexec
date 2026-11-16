@@ -52,6 +52,14 @@ describe.for(variants)('exec ($name)', ({x, isAsync}) => {
     expect(result.stderr).toBe('');
   });
 
+  test('handles multibyte UTF-8 characters split across chunks', async () => {
+    const result = await x('node', [
+      '-e',
+      "process.stdout.write(Buffer.from([0xF0, 0x9F])); setTimeout(() => process.stdout.write(Buffer.from([0x9A, 0x80])), 20);"
+    ]);
+    expect(result.stdout).toBe('🚀');
+  });
+
   test('captures stderr', async () => {
     const result = await x('node', ['-e', "console.error('some error')"]);
     expect(result.stderr).toBe('some error\n');
