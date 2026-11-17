@@ -7,6 +7,7 @@ import {
   basename
 } from 'node:path';
 import {cwd as getCwd} from 'node:process';
+import {fileURLToPath} from 'node:url';
 import {getPathFromEnv} from './env.js';
 
 // See http://www.robvanderwoude.com/escapechars.php
@@ -142,7 +143,9 @@ export function normalizeSpawnCommand(
  * Handles things like traversing PATH and adding extensions from PATHEXT
  */
 function resolveCommand(command: string, options: SpawnOptions): string | null {
-  const cwd = (options.cwd ?? getCwd()).toString();
+  const optionCwd = options.cwd ?? getCwd();
+  const cwd =
+    typeof optionCwd === 'string' ? optionCwd : fileURLToPath(optionCwd);
   const env = options.env ?? process.env;
   const PATH = getPathFromEnv(env).value;
 

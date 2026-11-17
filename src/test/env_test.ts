@@ -2,6 +2,7 @@ import {computeEnv, getPathFromEnv} from '../env.js';
 import {expect, test, describe} from 'vitest';
 import process from 'node:process';
 import path, {sep as pathSep, delimiter as pathDelimiter} from 'node:path';
+import {pathToFileURL} from 'node:url';
 
 const pathKey = getPathFromEnv(process.env).key;
 
@@ -125,7 +126,7 @@ describe('computeEnv', async () => {
   });
 
   test('supports file URL for cwd', () => {
-    const cwd = new URL('file:///one/two/three');
+    const cwd = pathToFileURL(path.resolve(pathSep, 'one', 'two', 'three'));
     const originalPath = path.join(pathSep, 'usr', 'local', 'bin');
 
     const env = computeEnv(cwd, {
@@ -142,5 +143,14 @@ describe('computeEnv', async () => {
     ].join(pathDelimiter);
 
     expect(env[pathKey]).toBe(expected);
+  });
+
+  test('file URL and path cwd produce the same PATH with encoded characters', () => {
+    const cwd = path.resolve('cwd with spaces', 'café #%');
+    const env = {PATH: 'existing-path'};
+
+    expect(computeEnv(pathToFileURL(cwd), env)[pathKey]).toBe(
+      computeEnv(cwd, env)[pathKey]
+    );
   });
 });

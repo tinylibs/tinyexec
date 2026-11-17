@@ -2,7 +2,7 @@ import {normalizeSpawnCommand} from '../normalize.js';
 import {describe, test, expect} from 'vitest';
 import os from 'node:os';
 import path from 'node:path';
-import {fileURLToPath} from 'node:url';
+import {fileURLToPath, pathToFileURL} from 'node:url';
 
 const isWindows = os.platform() === 'win32';
 const fixturesPath = path.join(
@@ -77,6 +77,19 @@ describe('normalizeSpawnCommand', () => {
 
       expect(normalized.command).toBe('where');
       expect(normalized.args).toEqual([scriptPath]);
+    });
+
+    test('resolves relative shebang commands from a file URL cwd', () => {
+      const cwd = pathToFileURL(fixturesPath);
+      const normalized = normalizeSpawnCommand('./shebang_script_noext', [], {
+        cwd
+      });
+
+      expect(normalized.command).toBe('where');
+      expect(normalized.args).toEqual([
+        path.join(fixturesPath, 'shebang_script_noext')
+      ]);
+      expect(normalized.options.cwd).toBe(cwd);
     });
 
     test('double escapes meta chars in args to a batch file', () => {
