@@ -57,6 +57,7 @@ export interface CommonOptions {
   timeout: number;
   throwOnError: boolean;
   nodePath: boolean;
+  inheritEnv: boolean;
 }
 
 export interface Options extends CommonOptions {
@@ -316,7 +317,12 @@ export class ExecProcess implements Result {
       nodeOptions.signal = combineSignals(signals);
     }
 
-    nodeOptions.env = computeEnv(cwd, nodeOptions.env, options.nodePath);
+    nodeOptions.env = computeEnv(
+      cwd,
+      nodeOptions.env,
+      options.nodePath,
+      options.inheritEnv
+    );
 
     const crossResult = normalizeSpawnCommand(
       this._command,
@@ -394,7 +400,12 @@ export function xSync(
     nodeOptions.timeout = opts.timeout;
   }
 
-  nodeOptions.env = computeEnv(cwd, nodeOptions.env, opts.nodePath);
+  nodeOptions.env = computeEnv(
+    cwd,
+    nodeOptions.env,
+    opts.nodePath,
+    opts.inheritEnv
+  );
 
   const crossResult = normalizeSpawnCommand(command, args ?? [], nodeOptions);
 
