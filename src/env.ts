@@ -59,10 +59,12 @@ function addNodeBinToPath(cwd: URL | string, path: EnvPathInfo): EnvPathInfo {
 export function computeEnv(
   cwd: URL | string,
   env?: EnvLike,
-  nodePath: boolean = true
+  nodePath: boolean = true,
+  inheritEnv: boolean = true
 ): EnvLike {
+  const baseEnv = inheritEnv ? process.env : {};
   const envWithDefault = {
-    ...process.env,
+    ...baseEnv,
     ...env
   };
 

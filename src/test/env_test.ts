@@ -79,6 +79,17 @@ describe('computeEnv', async () => {
     expect(env[pathKey]).toBe(originalPath);
   });
 
+  test('does not inherit process.env when inheritEnv is false', () => {
+    process.env.TINYEXEC_ISOLATE_TEST = 'foo';
+    try {
+      const env = computeEnv(process.cwd(), {BAR: 'bar'}, false, false);
+
+      expect(env).toEqual({BAR: 'bar'});
+    } finally {
+      delete process.env.TINYEXEC_ISOLATE_TEST;
+    }
+  });
+
   test('prepends local node_modules/.bin and directory of node executable to PATH', () => {
     /** The original variable is just `PATH=/usr/local/bin` */
     const originalPath = path.join(pathSep, 'usr', 'local', 'bin');

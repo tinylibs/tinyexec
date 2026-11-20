@@ -64,6 +64,7 @@ The options object can have the following properties:
 - `nodeOptions` - any valid options to node's underlying `spawn` function
 - `throwOnError` - if true, non-zero exit codes will throw an error
 - `nodePath` - if `false`, `node_modules/.bin` directories and the current node executable's directory will not be prepended to `PATH` (defaults to `true`)
+- `inheritEnv` - if `false`, `process.env` will not be inherited (defaults to `true`)
 
 ### Passing a string to stdin
 
