@@ -135,6 +135,7 @@ export class ExecProcess implements Result {
   protected _resolveClose?: () => void;
   protected _processClosed: Promise<void>;
   protected _thrownError?: Error;
+  protected _outputPromise?: Promise<Output>;
 
   public get process(): ChildProcess | undefined {
     return this._process;
@@ -284,7 +285,8 @@ export class ExecProcess implements Result {
     onfulfilled?: ((value: Output) => TResult1 | PromiseLike<TResult1>) | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
   ): Promise<TResult1 | TResult2> {
-    return this._waitForOutput().then(onfulfilled, onrejected);
+    this._outputPromise ??= this._waitForOutput();
+    return this._outputPromise.then(onfulfilled, onrejected);
   }
 
   protected _streamOut?: Readable;
@@ -360,6 +362,7 @@ export class ExecProcess implements Result {
 
   protected _resetState(): void {
     this._aborted = false;
+    this._outputPromise = undefined;
     this._processClosed = new Promise<void>((resolve) => {
       this._resolveClose = resolve;
     });

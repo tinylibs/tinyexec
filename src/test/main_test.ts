@@ -101,6 +101,64 @@ describe.for(variants)('exec ($name)', ({x, isAsync}) => {
 });
 
 describe('exec (async)', () => {
+  test('preserves output across repeated awaits', async () => {
+    const proc = x(process.execPath, [
+      '-e',
+      "console.log('stdout'); console.error('stderr')"
+    ]);
+    const expected = {stdout: 'stdout\n', stderr: 'stderr\n', exitCode: 0};
+
+    expect(await proc).toEqual(expected);
+    expect(await proc).toEqual(expected);
+  });
+
+  test('shares complete output between concurrent then handlers', async () => {
+    const proc = x(process.execPath, [
+      '-e',
+      "console.log('stdout'); console.error('stderr')"
+    ]);
+    const results = await Promise.all([
+      proc.then((output) => output.stdout),
+      proc.then((output) => output.stderr)
+    ]);
+
+    expect(results).toEqual(['stdout\n', 'stderr\n']);
+  });
+
+  test('preserves failed command output across repeated awaits', async () => {
+    const proc = x(
+      process.execPath,
+      [
+        '-e',
+        "console.log('stdout'); console.error('stderr'); process.exitCode = 1"
+      ],
+      {throwOnError: true}
+    );
+    const error = await proc.then(undefined, (reason) => reason);
+
+    expect(error).toBeInstanceOf(NonZeroExitError);
+    expect(error).toMatchObject({
+      output: {stdout: 'stdout\n', stderr: 'stderr\n', exitCode: 1}
+    });
+    expect(await proc.then(undefined, (reason) => reason)).toBe(error);
+  });
+
+  test('reads fresh output after spawning the process again', async () => {
+    const proc = new ExecProcess(process.execPath, [
+      '-e',
+      'process.stdout.write(String(process.pid))'
+    ]);
+    proc.spawn();
+    const first = await proc;
+
+    proc.spawn();
+    const second = await proc;
+
+    expect(second.stdout).toBe(String(proc.pid));
+    expect(second.stdout).not.toBe(first.stdout);
+    expect(second.exitCode).toBe(0);
+  });
+
   test.each(['ignore', 'inherit'] as const)(
     'async iteration completes with stdio=%s',
     async (stdio) => {
