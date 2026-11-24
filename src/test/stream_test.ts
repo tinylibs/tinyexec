@@ -1,4 +1,4 @@
-import {combineStreams, waitForEvent} from '../stream.js';
+import {combineStreams, readStream, waitForEvent} from '../stream.js';
 import {describe, test, expect} from 'vitest';
 import {EventEmitter} from 'node:events';
 import {Readable} from 'node:stream';
@@ -76,5 +76,15 @@ describe('combineStreams', async () => {
     });
     await waitForEvent(combined, 'end');
     expect(chunks).toEqual(['foo', 'bar']); // no time for 'baz' before stream0 was destroyed
+  });
+});
+
+describe('readStream', async () => {
+  test('decodes multibyte characters split across chunks', async () => {
+    const stream = Readable.from([
+      Buffer.from([0xf0, 0x9f]),
+      Buffer.from([0x9a, 0x80])
+    ]);
+    expect(await readStream(stream)).toBe('🚀');
   });
 });
