@@ -351,9 +351,10 @@ export class ExecProcess implements Result {
       const {stdin} = options;
 
       // A child may exit without reading all of its input (e.g. `head`),
-      // which surfaces as EPIPE here. That is not a failure of ours.
+      // which surfaces as EPIPE here (EOF on Windows). That is not a failure
+      // of ours.
       handle.stdin.on('error', (err: NodeJS.ErrnoException) => {
-        if (err.code !== 'EPIPE') {
+        if (err.code !== 'EPIPE' && err.code !== 'EOF') {
           this._thrownError = err;
         }
       });
