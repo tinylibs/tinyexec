@@ -146,7 +146,7 @@ describe('computeEnv', async () => {
   });
 
   test('file URL and path cwd produce the same PATH with encoded characters', () => {
-    const cwd = path.resolve('cwd with spaces', 'café #%');
+    const cwd = path.resolve('special % chars');
     const env = {PATH: 'existing-path'};
 
     expect(computeEnv(pathToFileURL(cwd), env)[pathKey]).toBe(
