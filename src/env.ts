@@ -39,8 +39,7 @@ function addNodeBinToPath(cwd: URL | string, path: EnvPathInfo): EnvPathInfo {
   const parts = path.value.split(pathDelimiter);
   const nodeBinPaths: string[] = [];
 
-  let currentPath =
-    typeof cwd === 'string' ? cwd : fileURLToPath(cwd, {windows: false});
+  let currentPath = typeof cwd === 'string' ? cwd : fileURLToPath(cwd);
   let lastPath: string;
 
   do {

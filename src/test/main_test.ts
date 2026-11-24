@@ -98,6 +98,54 @@ describe.for(variants)('exec ($name)', ({x, isAsync}) => {
       path.join(repoRootDir, 'node_modules', '.bin')
     );
   });
+
+  test.runIf(isWindows)(
+    'runs relative shebang commands with a file URL cwd',
+    async () => {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'tinyexec-url-'));
+
+      try {
+        fs.writeFileSync(
+          path.join(root, 'print-cwd'),
+          '#!/usr/bin/env node\nprocess.stdout.write(process.cwd());\n'
+        );
+
+        const result = await x('./print-cwd', [], {
+          nodeOptions: {cwd: pathToFileURL(root)},
+          throwOnError: true
+        });
+
+        expect(result.stdout).toBe(root);
+      } finally {
+        fs.rmSync(root, {recursive: true, force: true});
+      }
+    }
+  );
+
+  test.runIf(isWindows)(
+    'finds local node binaries with a file URL cwd',
+    async () => {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'tinyexec-url-bin-'));
+      const bin = path.join(root, 'node_modules', '.bin');
+
+      try {
+        fs.mkdirSync(bin, {recursive: true});
+        fs.writeFileSync(
+          path.join(bin, 'cwd-url-test.cmd'),
+          '@echo url-bin\r\n'
+        );
+
+        const result = await x('cwd-url-test', [], {
+          nodeOptions: {cwd: pathToFileURL(root)},
+          throwOnError: true
+        });
+
+        expect(result.stdout.trim()).toBe('url-bin');
+      } finally {
+        fs.rmSync(root, {recursive: true, force: true});
+      }
+    }
+  );
 });
 
 describe('exec (async)', () => {
