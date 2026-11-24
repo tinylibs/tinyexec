@@ -252,6 +252,15 @@ describe('exec (async)', () => {
     expect(result.exitCode).toBe(0);
   });
 
+  test('does not crash when the process exits without reading stdin', async () => {
+    // Larger than the pipe buffer, so the write is still pending on exit
+    const result = await x('node', ['-e', 'process.exit(0)'], {
+      stdin: 'x'.repeat(4 * 1024 * 1024)
+    });
+
+    expect(result.exitCode).toBe(0);
+  });
+
   test('supports stdin passed as another process (Result)', async () => {
     const proc = x('node', ['-e', "process.stdout.write('foo\\nbar')"]);
     const result = await x(
