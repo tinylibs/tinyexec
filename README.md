@@ -99,6 +99,31 @@ proc1.pipe('grep', ['.js'], {
 });
 ```
 
+### Streaming output from long-running processes
+
+For processes that produce output over time, iterate over the result to receive lines as they are written (stdout and stderr combined):
+
+```ts
+const proc = x('npm', ['run', 'build']);
+
+for await (const line of proc) {
+  console.log(line);
+}
+```
+
+If you need stdout and stderr separately, or raw chunks rather than lines, listen to the underlying streams directly via `proc.process`:
+
+```ts
+const proc = x('npm', ['run', 'build']);
+
+proc.process?.stdout?.on('data', (chunk) => {
+  process.stdout.write(chunk);
+});
+proc.process?.stderr?.pipe(process.stderr);
+
+const result = await proc;
+```
+
 ### Killing a process
 
 You can kill the process via the `kill` method:
