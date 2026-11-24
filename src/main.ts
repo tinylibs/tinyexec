@@ -8,11 +8,10 @@ import {
 import {type Readable} from 'node:stream';
 import {cwd as getCwd} from 'node:process';
 import {computeEnv} from './env.js';
-import {combineStreams} from './stream.js';
+import {combineStreams, readStream} from './stream.js';
 import readline from 'node:readline';
 import {normalizeSpawnCommand} from './normalize.js';
 import {NonZeroExitError} from './non-zero-exit-error.js';
-import {StringDecoder} from 'node:string_decoder';
 
 export {NonZeroExitError, normalizeSpawnCommand};
 
@@ -110,22 +109,6 @@ function combineSignals(signals: Iterable<AbortSignal>): AbortSignal {
   }
 
   return controller.signal;
-}
-
-async function readStream(stream: Readable): Promise<string> {
-  let output = '';
-  const decoder = new StringDecoder();
-
-  try {
-    for await (const chunk of stream) {
-      output += typeof chunk === 'string' ? chunk : decoder.write(chunk);
-    }
-    output += decoder.end();
-  } catch {
-    // suppress errors, child process probably failed to spawn
-  }
-
-  return output;
 }
 
 export class ExecProcess implements Result {
