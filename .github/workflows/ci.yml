@@ -87,9 +87,7 @@ jobs:
         with:
           name: dist
           path: dist/
-      # No `npm ci` on purpose: the smoke test imports `dist/` and node
-      # builtins only. Installing dev dependencies is what made 18.x
-      # unworkable before, so this job never touches them.
+      # No `npm ci` on purpose: this must only use the built code & builtins
       - run: npm run test:smoke
 
   bun-build:
