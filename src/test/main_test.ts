@@ -279,6 +279,39 @@ describe('exec (async)', () => {
     }).rejects.toThrow(NonZeroExitError);
   });
 
+  test.each([true, false])(
+    'async iteration preserves upstream throwOnError=%s',
+    async (throwOnError) => {
+      const source = x(
+        process.execPath,
+        ['-e', "console.log('foo'); process.exitCode = 7"],
+        {throwOnError}
+      );
+      const destination = source.pipe(process.execPath, [
+        '-e',
+        'process.stdin.pipe(process.stdout)'
+      ]);
+      const lines: string[] = [];
+      let error: unknown;
+
+      try {
+        for await (const line of destination) lines.push(line);
+      } catch (err) {
+        error = err;
+      }
+
+      expect(lines).toEqual(['foo']);
+      expect(destination.exitCode).toBe(0);
+      if (throwOnError) {
+        expect.assert(error instanceof NonZeroExitError);
+        expect(error.exitCode).toBe(7);
+        expect(error.result).toBe(source);
+      } else {
+        expect(error).toBeUndefined();
+      }
+    }
+  );
+
   test('supports stdin passed as a string', async () => {
     let result = await x('node', ['-e', 'process.stdin.pipe(process.stdout)'], {
       stdin: 'foo\nbar'
