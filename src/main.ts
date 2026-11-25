@@ -209,6 +209,12 @@ export class ExecProcess implements Result {
 
     await this._processClosed;
 
+    const {stdin} = this._options;
+
+    if (stdin && typeof stdin !== 'string') {
+      await stdin;
+    }
+
     proc.removeAllListeners();
 
     if (this._thrownError) {
