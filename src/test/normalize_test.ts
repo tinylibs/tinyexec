@@ -43,7 +43,7 @@ describe('normalizeSpawnCommand', () => {
 
       expect(normalized).toEqual({
         command: 'cmd.exe',
-        args: ['/d', '/s', '/c', '"nonexistent ^"hi^""'],
+        args: ['/d', '/s', '/v:off', '/c', '"nonexistent ^"hi^""'],
         options: {windowsVerbatimArguments: true}
       });
     });
@@ -56,7 +56,7 @@ describe('normalizeSpawnCommand', () => {
       const normalized = normalizeSpawnCommand(relativePath, []);
       expect(normalized).toEqual({
         command: 'cmd.exe',
-        args: ['/d', '/s', '/c', `"${relativePath}"`],
+        args: ['/d', '/s', '/v:off', '/c', `"${relativePath}"`],
         options: {windowsVerbatimArguments: true}
       });
     });
@@ -98,7 +98,7 @@ describe('normalizeSpawnCommand', () => {
 
       // the batch interpreter consumes a second layer of `^` escapes when it
       // expands `%*`, so `&` must still be escaped at that point
-      expect(normalized.args[3]).toBe(
+      expect(normalized.args[4]).toBe(
         `"${cmdPath} ^^^"\\^^^"^^^&injected^^^""`
       );
     });
@@ -106,7 +106,7 @@ describe('normalizeSpawnCommand', () => {
     test('single escapes meta chars in args to a non-batch command', () => {
       const normalized = normalizeSpawnCommand('nonexistent', ['"&injected']);
 
-      expect(normalized.args[3]).toBe('"nonexistent ^"\\^"^&injected^""');
+      expect(normalized.args[4]).toBe('"nonexistent ^"\\^"^&injected^""');
     });
 
     test('handles relative commands without extension', () => {
@@ -117,7 +117,7 @@ describe('normalizeSpawnCommand', () => {
       const normalized = normalizeSpawnCommand(relativePath, []);
       expect(normalized).toEqual({
         command: 'cmd.exe',
-        args: ['/d', '/s', '/c', `"${relativePath}"`],
+        args: ['/d', '/s', '/v:off', '/c', `"${relativePath}"`],
         options: {windowsVerbatimArguments: true}
       });
     });

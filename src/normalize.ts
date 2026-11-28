@@ -129,7 +129,9 @@ export function normalizeSpawnCommand(
       return arg;
     });
 
-    args = ['/d', '/s', '/c', `"${[command, ...args].join(' ')}"`];
+    // `/v:off` because delayed expansion, which the registry can turn on,
+    // would expand `!name!` in the arguments despite the escaping above
+    args = ['/d', '/s', '/v:off', '/c', `"${[command, ...args].join(' ')}"`];
     command = options.env?.comspec ?? 'cmd.exe';
     // Tell node's spawn that the arguments are already escaped
     options = {...options, windowsVerbatimArguments: true};
