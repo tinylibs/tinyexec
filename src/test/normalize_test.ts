@@ -79,6 +79,14 @@ describe('normalizeSpawnCommand', () => {
       expect(normalized.args).toEqual([scriptPath]);
     });
 
+    test('passes the shebang argument to the interpreter', () => {
+      const scriptPath = path.join(fixturesPath, 'shebang_script_arg');
+      const normalized = normalizeSpawnCommand(scriptPath, ['x']);
+
+      expect(normalized.command).toBe('where');
+      expect(normalized.args).toEqual(['/q', scriptPath, 'x']);
+    });
+
     test('resolves relative shebang commands from a file URL cwd', () => {
       const cwd = pathToFileURL(fixturesPath);
       const normalized = normalizeSpawnCommand('./shebang_script_noext', [], {

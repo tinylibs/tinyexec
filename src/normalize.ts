@@ -44,6 +44,7 @@ export function normalizeSpawnCommand(
   // Detect & add support for shebangs
   let file = resolveCommand(command, options);
   let shebang: string | null = null;
+  let shebangArgs: string[] = [];
 
   if (file !== null) {
     // Read the first 150 bytes from the file
@@ -72,12 +73,18 @@ export function normalizeSpawnCommand(
         separatorIndex !== -1 ? line.slice(separatorIndex + 1) : '';
       const binary = basename(path);
 
-      shebang = binary === 'env' ? argument || null : binary;
+      if (binary === 'env') {
+        shebang = argument || null;
+      } else {
+        shebang = binary;
+        // Like on Unix, the interpreter gets the rest of the line as one argument
+        shebangArgs = argument ? [argument] : [];
+      }
     }
   }
 
   if (shebang !== null && file !== null) {
-    args = [file, ...args];
+    args = [...shebangArgs, file, ...args];
     command = shebang;
 
     file = resolveCommand(command, options);
